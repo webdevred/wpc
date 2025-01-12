@@ -1,3 +1,16 @@
+---
 BasedOnStyle: LLVM
 IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+BreakBeforeBraces: Attach
+BraceWrapping:
+  AfterFunction: false
+  AfterControlStatement: false
+  AfterStruct: false
+  AfterEnum: false
+  AfterClass: false
 ColumnLimit: 80
+AllowShortIfStatementsOnASingleLine: true
+AlignAfterOpenBracket: Align
+SpacesBeforeTrailingComments: 1

@@ -24,9 +24,13 @@ static gchar **list_images(gchar *source_directory) {
                 closedir(dir);
             }
 
-            filenamesArray[filenameArraySize] = malloc(strlen(filename) + 1);
+            filenamesArray[filenameArraySize] =
+                malloc(strlen(source_directory) * sizeof(gchar *) +
+                       strlen(filename) * sizeof(gchar *) + sizeof(gchar *));
             if (filenamesArray[filenameArraySize]) {
-                strcpy(filenamesArray[filenameArraySize], filename);
+                gchar *image_path =
+                    g_strdup(g_strconcat(source_directory, filename, NULL));
+                strcpy(filenamesArray[filenameArraySize], image_path);
                 filenameArraySize++;
             }
         }
@@ -68,47 +72,51 @@ static void show_image(GtkWidget *image, gchar *image_path) {
 
 static void image_clicked(GtkWidget *widget, GdkEventButton *event,
                           gpointer user_data) {
-    gchar *image_path = (gchar *)user_data;
+    gchar *image_path = g_object_get_data(G_OBJECT(widget), "image_path");
+
     g_print("Clicked image %s\n", image_path);
+}
+
+void free_image_paths(gpointer data) {
+    gchar **image_paths = (gchar **)data;
+    if (image_paths) {
+        for (int i = 0; image_paths[i] != NULL; i++) {
+            g_free(image_paths[i]);
+        }
+        g_free(image_paths);
+    }
 }
 
 static void activate(GtkApplication *app, gpointer user_data) {
     GtkWidget *window = gtk_application_window_new(GTK_APPLICATION(app));
-
     GtkWidget *hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 2);
     gtk_container_add(GTK_CONTAINER(window), hbox);
 
     gchar *source_directory = "/mnt/HDD/backgrounds/";
-    gchar **images = list_images(source_directory);
+    gchar **image_paths = list_images(source_directory);
 
-    if (images) {
-        for (int i = 0; images[i] != NULL; i++) {
+    if (image_paths) {
+        // Store image paths in the window for cleanup
+        g_object_set_data_full(G_OBJECT(window), "image_paths",
+                               (gpointer)image_paths, free_image_paths);
+
+        for (int i = 0; image_paths[i] != NULL; i++) {
             GtkWidget *event_box;
             GtkWidget *image = gtk_image_new();
 
             event_box = gtk_event_box_new();
-
             gtk_container_add(GTK_CONTAINER(event_box), image);
             gtk_box_pack_start(GTK_BOX(hbox), event_box, TRUE, TRUE, 0);
 
-            gchar *image_path =
-                malloc(strlen(source_directory) * sizeof(gchar *) +
-                       strlen(images[i]) * sizeof(gchar *) + sizeof(gchar *));
+            show_image(image, image_paths[i]);
 
-            image_path =
-                g_strdup(g_strconcat(source_directory, images[i], NULL));
-
-            show_image(image, image_path);
+            g_object_set_data(G_OBJECT(event_box), "image_path",
+                              (gpointer)image_paths[i]);
 
             g_signal_connect_data(G_OBJECT(event_box), "button_press_event",
-                                  G_CALLBACK(image_clicked),
-                                  (gpointer)image_path, NULL, 0);
-
-            free(images[i]);
-            g_free(image_path);
+                                  G_CALLBACK(image_clicked), (gpointer)app,
+                                  NULL, 0);
         }
-
-        free(images);
     } else {
         g_print("No images found in %s\n", source_directory);
     }

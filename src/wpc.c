@@ -82,15 +82,24 @@ static void show_image(GtkWidget *image, gchar *image_path,
 
         gtk_image_set_from_pixbuf(GTK_IMAGE(image), scaled_pixbuf);
 
+        gtk_widget_set_size_request(image, new_image_width, new_height);
         g_object_unref(scaled_pixbuf);
     }
 }
 
-static void image_clicked(GtkWidget *widget, GdkEventButton *event,
-                          gpointer user_data) {
-    gchar *image_path = g_object_get_data(G_OBJECT(widget), "image_path");
+static void image_clicked(GtkFlowBox *flowbox, gpointer user_data) {
 
-    g_print("Clicked image %s\n", image_path);
+    GList *flowbox_children = gtk_flow_box_get_selected_children(flowbox);
+    GtkWidget *selected_children = GTK_WIDGET(flowbox_children->data);
+
+    GList *children =
+        gtk_container_get_children(GTK_CONTAINER(selected_children));
+    if (children) {
+        GtkWidget *image = GTK_WIDGET(children->data);
+        gchar *image_path = g_object_get_data(G_OBJECT(image), "image_path");
+
+        g_print("Clicked image %s\n", image_path);
+    }
 }
 
 void free_image_paths(gpointer data) {
@@ -119,9 +128,9 @@ void destroy_all_widgets(GtkWidget *container) {
     g_list_free(children);
 }
 
-static void on_window_realized(GtkWidget *window, GdkEvent *event,
-                               gpointer user_data) {
-    GtkApplication *app = GTK_APPLICATION(user_data);
+static void activate(GtkApplication *app, gpointer user_data) {
+    GtkWidget *window = gtk_application_window_new(GTK_APPLICATION(app));
+
     int image_width = 500;
 
     gint window_width = gtk_widget_get_allocated_width(window);
@@ -132,38 +141,23 @@ static void on_window_realized(GtkWidget *window, GdkEvent *event,
 
     destroy_all_widgets(window);
 
-    GtkWidget *gridbox = gtk_grid_new();
-    gtk_grid_set_column_spacing(GTK_GRID(gridbox), 10);
-    gtk_grid_set_row_spacing(GTK_GRID(gridbox), 10);
+    GtkWidget *flowbox = gtk_flow_box_new();
+    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), 10);
+    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), 10);
 
-    gtk_container_add(GTK_CONTAINER(window), gridbox);
+    gtk_container_add(GTK_CONTAINER(window), flowbox);
+
+    g_signal_connect(flowbox, "selected-children-changed",
+                     G_CALLBACK(image_clicked), NULL);
 
     if (image_paths) {
-        int columns = window_width / image_width;
-        int current_column = 0;
-        int current_row = 0;
-
         for (int i = 0; i < number_of_images; i++) {
-            g_print("%d %d %d", current_row, current_column, window_width);
-            GtkWidget *event_box = gtk_event_box_new();
             GtkWidget *image = gtk_image_new();
-            gtk_container_add(GTK_CONTAINER(event_box), image);
-            gtk_grid_attach(GTK_GRID(gridbox), event_box, current_column,
-                            current_row, 1, 1);
-
+            gtk_flow_box_insert(GTK_FLOW_BOX(flowbox), image, -1);
             show_image(image, image_paths[i], image_width);
 
-            g_object_set_data(G_OBJECT(event_box), "image_path",
+            g_object_set_data(G_OBJECT(image), "image_path",
                               (gpointer)image_paths[i]);
-            g_signal_connect(event_box, "button_press_event",
-                             G_CALLBACK(image_clicked), app);
-
-            current_column += image_width;
-
-            if (current_column >= columns * image_width) {
-                current_column = 0;
-                current_row += image_width;
-            }
         }
 
         g_object_set_data_full(G_OBJECT(window), "image_paths", image_paths,
@@ -171,16 +165,9 @@ static void on_window_realized(GtkWidget *window, GdkEvent *event,
     } else {
         g_print("No images found in %s\n", source_directory);
     }
-
     gtk_widget_show_all(window);
 }
 
-static void activate(GtkApplication *app, gpointer user_data) {
-    GtkWidget *window = gtk_application_window_new(GTK_APPLICATION(app));
-    g_signal_connect(window, "configure-event", G_CALLBACK(on_window_realized),
-                     (gpointer)app);
-    gtk_widget_show_all(window);
-}
 
 int main(int argc, char **argv) {
     GtkApplication *app;

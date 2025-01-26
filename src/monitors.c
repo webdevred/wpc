@@ -24,7 +24,7 @@ void init_disp(Display **display, Window *root,
     }
 }
 
-extern void list_monitors(Monitor **monitors, int *number_of_monitors) {
+extern void wm_list_monitors(Monitor **monitors, int *number_of_monitors) {
     Display *display;
     Window root;
     XRRScreenResources *screenResources;
@@ -62,6 +62,54 @@ extern void list_monitors(Monitor **monitors, int *number_of_monitors) {
                     (screenResources->outputs[i] == primaryOutput);
 
                 XRRFreeCrtcInfo(crtcInfo);
+            }
+        }
+
+        XRRFreeOutputInfo(outputInfo);
+    }
+
+    XRRFreeScreenResources(screenResources);
+    XCloseDisplay(display);
+}
+
+extern void dm_list_monitors(Monitor **primary_monitor,
+                             int *number_of_other_monitors) {
+    Display *display;
+    Window root;
+    XRRScreenResources *screenResources;
+
+    init_disp(&display, &root, &screenResources);
+
+    XRROutputInfo *outputInfo;
+    XRRCrtcInfo *crtcInfo;
+
+    RROutput primaryOutput;
+
+    primaryOutput = XRRGetOutputPrimary(display, root);
+
+    *primary_monitor = (Monitor *)malloc(screenResources->noutput);
+    if (*primary_monitor == NULL) {
+        fprintf(stderr, "Failed to allocate memory for monitors\n");
+        XRRFreeScreenResources(screenResources);
+        XCloseDisplay(display);
+        exit(1);
+    }
+
+    for (int i = 0; i < screenResources->noutput; i++) {
+        outputInfo = XRRGetOutputInfo(display, screenResources,
+                                      screenResources->outputs[i]);
+
+        if (outputInfo->connection == RR_Connected) {
+            crtcInfo =
+                XRRGetCrtcInfo(display, screenResources, outputInfo->crtc);
+            if (crtcInfo && screenResources->outputs[i] == primaryOutput) {
+                (*primary_monitor)->width = crtcInfo->width;
+                (*primary_monitor)->height = crtcInfo->height;
+                (*primary_monitor)->primary = true;
+
+                XRRFreeCrtcInfo(crtcInfo);
+            } else {
+                (*number_of_other_monitors)++;
             }
         }
 

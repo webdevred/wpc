@@ -4,11 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "fs.h"
+#include "filesystem.h"
 #include "gui.h"
 #include "lightdm.h"
 #include "monitors.h"
 #include "resolution_scaling.h"
+#include "wallpaper_struct.h"
 
 static gchar *log_resolution(int x, int y) {
     char *format = "%d x %d";
@@ -17,11 +18,9 @@ static gchar *log_resolution(int x, int y) {
     sprintf(output, format, x, y);
     return output;
 }
-static void show_image(GtkWidget *image, const char *image_path,
+static void show_image(GtkWidget *image, const gchar *image_path,
                        const int new_image_width) {
-    gchar *g_image_path = g_locale_to_utf8(image_path, -1, NULL, NULL, NULL);
-    gtk_image_set_from_file(GTK_IMAGE(image), g_image_path);
-
+    gtk_image_set_from_file(GTK_IMAGE(image), image_path);
     GdkPixbuf *pixbuf = gtk_image_get_pixbuf(GTK_IMAGE(image));
     if (pixbuf) {
         int original_width = gdk_pixbuf_get_width(pixbuf);
@@ -47,10 +46,11 @@ static void show_image(GtkWidget *image, const char *image_path,
     }
 }
 
-static char *get_flow_child_image_path(GtkFlowBoxChild *flow_child) {
+static Wallpaper *get_flow_child_wallpaper(GtkFlowBoxChild *flow_child) {
     GtkWidget *image = gtk_bin_get_child(GTK_BIN(flow_child));
 
-    return g_object_get_data(G_OBJECT(image), "image_path");
+    Wallpaper *wallpaper = g_object_get_data(G_OBJECT(image), "wallpaper");
+    return wallpaper;
 }
 
 static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
@@ -60,9 +60,9 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
     GList *flowbox_children = gtk_flow_box_get_selected_children(flowbox);
     GtkFlowBoxChild *selected_children = flowbox_children->data;
 
-    char *image_path = get_flow_child_image_path(selected_children);
+    Wallpaper *wallpaper = get_flow_child_wallpaper(selected_children);
 
-    g_print("Clicked image %s Selected monitor: %dx%d\n", image_path,
+    g_print("Clicked image %s Selected monitor: %dx%d\n", wallpaper->path,
             monitor->width, monitor->height);
 
     GtkButton *button_menu_choice =
@@ -72,17 +72,19 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
 
     if (g_strcmp0(menu_choice, "dm_background")) {
-        lightdm_set_background_primary(image_path, monitor);
+        lightdm_set_background(wallpaper, monitor);
     }
 }
 
-static void free_image_paths(gpointer data) {
-    char **image_paths = (char **)data;
-    if (image_paths) {
-        for (int i = 0; image_paths[i] != NULL; i++) {
-            free(image_paths[i]);
+static void free_wallpapers(gpointer data) {
+    Wallpaper *wallpapers = (Wallpaper *)data;
+    if (wallpapers) {
+        // Iterate over the wallpapers array until we hit the NULL-terminated
+        // path
+        for (int i = 0; wallpapers[i].path != NULL; i++) {
+            free(wallpapers[i].path); // Free each wallpaper's path
         }
-        free(image_paths);
+        free(wallpapers); // Free the wallpaper array itself
     }
 }
 
@@ -112,10 +114,12 @@ static void destroy_all_widgets(GtkWidget *container) {
 static gint sort_flow_images(GtkFlowBoxChild *child1, GtkFlowBoxChild *child2,
                              gpointer user_data) {
     (void)user_data;
-    char *image_path1 = get_flow_child_image_path(child1);
-    char *image_path2 = get_flow_child_image_path(child2);
+    Wallpaper *wallpaper1 = get_flow_child_wallpaper(child1);
+    Wallpaper *wallpaper2 = get_flow_child_wallpaper(child2);
 
-    return strcmp(image_path1, image_path2);
+    gchar *image_path1 = wallpaper1->path;
+    gchar *image_path2 = wallpaper2->path;
+    return g_strcmp0(image_path1, image_path2);
 }
 
 static void show_images(GtkButton *button, GtkApplication *app) {
@@ -123,7 +127,9 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     int number_of_images;
 
     char *source_directory = "/mnt/HDD/backgrounds/";
-    char **image_paths = list_images(source_directory, &number_of_images);
+    Wallpaper *wallpapers =
+        list_wallpapers(source_directory, &number_of_images);
+    g_print("hej");
 
     Monitor *monitor = g_object_get_data(G_OBJECT(button), "monitor");
 
@@ -156,18 +162,19 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     g_signal_connect(flowbox, "selected-children-changed",
                      G_CALLBACK(image_selected), app);
 
-    if (image_paths) {
+    if (wallpapers) {
         for (int i = 0; i < number_of_images; i++) {
             GtkWidget *image = gtk_image_new();
             gtk_flow_box_insert(GTK_FLOW_BOX(flowbox), image, -1);
-            show_image(image, image_paths[i], image_width);
 
-            g_object_set_data(G_OBJECT(image), "image_path",
-                              (gpointer)image_paths[i]);
+            show_image(image, wallpapers[i].path, image_width);
+
+            g_object_set_data(G_OBJECT(image), "wallpaper",
+                              (gpointer)&wallpapers[i]);
         }
 
-        g_object_set_data_full(G_OBJECT(app), "image_paths", image_paths,
-                               free_image_paths);
+        g_object_set_data_full(G_OBJECT(app), "wallpapers",
+                               (gpointer)wallpapers, free_wallpapers);
     } else {
         g_print("No images found in %s\n", source_directory);
     }
@@ -211,12 +218,14 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
     GtkApplication *app = GTK_APPLICATION(user_data);
     GtkWidget *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
     Monitor *primary_monitor;
+    Monitor **other_monitors = NULL;
     int number_of_other_monitors;
     destroy_all_widgets(monitors_box);
 
     g_object_set_data(G_OBJECT(app), "menu_choice", (gpointer)button);
 
-    dm_list_monitors(&primary_monitor, &number_of_other_monitors);
+    dm_list_monitors(&primary_monitor, other_monitors,
+                     &number_of_other_monitors);
 
     gchar *primary_resoulution =
         log_resolution(primary_monitor->width, primary_monitor->height);

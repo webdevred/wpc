@@ -218,13 +218,13 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
     GtkApplication *app = GTK_APPLICATION(user_data);
     GtkWidget *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
     Monitor *primary_monitor;
-    Monitor **other_monitors = NULL;
+    Monitor *other_monitors;
     int number_of_other_monitors;
     destroy_all_widgets(monitors_box);
 
     g_object_set_data(G_OBJECT(app), "menu_choice", (gpointer)button);
 
-    dm_list_monitors(&primary_monitor, other_monitors,
+    dm_list_monitors(&primary_monitor, &other_monitors,
                      &number_of_other_monitors);
 
     gchar *primary_resoulution =

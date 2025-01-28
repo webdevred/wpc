@@ -41,6 +41,7 @@ extern void wm_list_monitors(Monitor **monitors, int *number_of_monitors) {
     *number_of_monitors = screenResources->noutput;
 
     *monitors = (Monitor *)malloc(screenResources->noutput * sizeof(Monitor));
+
     if (monitors == NULL) {
         fprintf(stderr, "Failed to allocate memory for monitors\n");
         XRRFreeScreenResources(screenResources);
@@ -89,6 +90,11 @@ extern void dm_list_monitors(Monitor **primary_monitor,
     primaryOutput = XRRGetOutputPrimary(display, root);
 
     *primary_monitor = malloc(sizeof(Monitor));
+
+    *number_of_other_monitors = screenResources->noutput - 1;
+    *other_monitors =
+        (Monitor *)malloc((*number_of_other_monitors) * sizeof(Monitor));
+
     if (*primary_monitor == NULL) {
         fprintf(stderr, "Failed to allocate memory for monitors\n");
         XRRFreeScreenResources(screenResources);
@@ -110,15 +116,9 @@ extern void dm_list_monitors(Monitor **primary_monitor,
 
                 XRRFreeCrtcInfo(crtcInfo);
             } else {
-                other_monitors =
-                    realloc(other_monitors,
-                            sizeof(Monitor) * (*number_of_other_monitors + 1));
-                other_monitors[*number_of_other_monitors]->width =
-                    crtcInfo->width;
-                other_monitors[*number_of_other_monitors]->height =
-                    crtcInfo->height;
-                other_monitors[*number_of_other_monitors]->primary = false;
-                (*number_of_other_monitors)++;
+                (*other_monitors)[i].width = crtcInfo->width;
+                (*other_monitors)[i].height = crtcInfo->height;
+                (*other_monitors)[i].primary = false;
             }
         }
 

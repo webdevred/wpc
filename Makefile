@@ -42,6 +42,12 @@ $(TARGET): $(OBJS)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $< -o $@
 
+ccls:
+	echo clang > .ccls
+	echo -Iinclude >> .ccls
+	echo -n $(CFLAGS) | sed 's/ /\n/g' >> .ccls
+	echo -n $(LDFLAGS) | sed 's/ /\n/g' >> .ccls
+
 # Create build directory if it doesn't exist
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)

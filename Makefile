@@ -5,11 +5,10 @@ SHELL := /bin/bash
 CC = gcc
 
 # Flags for compiling and linking
-CFLAGS = -Wall -Wextra -std=c11 -g3 \
+CFLAGS = -Wall -Wextra -std=c23 -g3 \
          $(shell pkg-config --cflags gtk+-3.0) \
          $(shell pkg-config --cflags glib-2.0) \
          $(shell pkg-config --cflags MagickWand) \
-         $(shell pkg-config --cflags libexif) \
          -D_POSIX_C_SOURCE=200809L
 
 LDFLAGS = $(shell pkg-config --libs gtk+-3.0) \
@@ -42,6 +41,8 @@ $(TARGET): $(OBJS)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $< -o $@
 
+.SILENT: ccls
+
 ccls:
 	echo clang > .ccls
 	echo -Iinclude >> .ccls
@@ -51,6 +52,12 @@ ccls:
 # Create build directory if it doesn't exist
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
+
+install:
+	mv wpc /usr/local/bin/wpc
+	chown root:root /usr/local/bin/wpc
+	chmod 0755 /usr/local/bin/wpc
+	chmod u+s /usr/local/bin/wpc
 
 # Clean build files
 clean:

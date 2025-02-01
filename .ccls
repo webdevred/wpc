@@ -2,7 +2,7 @@ clang
 -Iinclude
 -Wall
 -Wextra
--std=c11
+-std=c23
 -g3
 -I/usr/include/gtk-3.0
 -I/usr/include/pango-1.0

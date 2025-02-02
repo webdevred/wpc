@@ -88,7 +88,7 @@ static void free_wallpapers(gpointer data) {
     }
 }
 
-static void free_primary_monitor(gpointer data) {
+static void free_monitor(gpointer data) {
     Monitor *primary_monitor = (Monitor *)data;
     free(primary_monitor);
 }
@@ -188,21 +188,20 @@ static void wm_show_monitors(GtkButton *button, gpointer user_data) {
     (void)button;
     GtkApplication *app = GTK_APPLICATION(user_data);
     GtkWidget *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
-    Monitor *monitors;
     int number_of_monitors;
+    Monitor *monitors = wm_list_monitors(&number_of_monitors);
+
     destroy_all_widgets(monitors_box);
 
     g_object_set_data(G_OBJECT(app), "menu_choice", (gpointer)button);
 
-    wm_list_monitors(&monitors, &number_of_monitors);
-
     for (int monitor_id = 0; monitor_id < number_of_monitors; monitor_id++) {
-        Monitor *monitor = &monitors[monitor_id];
+        Monitor monitor = monitors[monitor_id];
 
-        gchar *resoulution = log_resolution(monitor->width, monitor->height);
+        gchar *resoulution = log_resolution(monitor.width, monitor.height);
         GtkWidget *button = gtk_button_new_with_label(resoulution);
 
-        g_object_set_data(G_OBJECT(button), "monitor", (gpointer)monitor);
+        g_object_set_data(G_OBJECT(button), "monitor", (gpointer)&monitor);
         g_signal_connect(button, "clicked", G_CALLBACK(show_images),
                          (gpointer)app);
         gtk_box_pack_start(GTK_BOX(monitors_box), button, false, false, 10);
@@ -217,23 +216,25 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
     (void)button;
     GtkApplication *app = GTK_APPLICATION(user_data);
     GtkWidget *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
-    Monitor *primary_monitor;
-    Monitor *other_monitors;
+    Monitor *primary_monitor, *secondary_monitor;
     int number_of_other_monitors;
+
+    primary_monitor = malloc(sizeof(Monitor));
+    secondary_monitor = malloc(sizeof(Monitor));
+
     destroy_all_widgets(monitors_box);
 
     g_object_set_data(G_OBJECT(app), "menu_choice", (gpointer)button);
 
-    dm_list_monitors(&primary_monitor, &other_monitors,
+    dm_list_monitors(primary_monitor, secondary_monitor,
                      &number_of_other_monitors);
 
-    gchar *primary_resoulution =
-        log_resolution(primary_monitor->width, primary_monitor->height);
-    GtkWidget *button_primary_monitor =
-        gtk_button_new_with_label(primary_resoulution);
+    GtkWidget *button_primary_monitor = gtk_button_new_with_label(
+        g_strdup_printf("Primary monitor (%d x %d)", primary_monitor->width,
+                        primary_monitor->height));
 
     g_object_set_data_full(G_OBJECT(button_primary_monitor), "monitor",
-                           (gpointer)primary_monitor, free_primary_monitor);
+                           (gpointer)primary_monitor, free_monitor);
 
     g_signal_connect(button_primary_monitor, "clicked", G_CALLBACK(show_images),
                      (gpointer)app);
@@ -241,15 +242,34 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
     gtk_box_pack_start(GTK_BOX(monitors_box), button_primary_monitor, false,
                        false, 10);
 
-    if (number_of_other_monitors > 0) {
+    if (number_of_other_monitors == 1) {
+        GtkWidget *button_secondary_monitor =
+            gtk_button_new_with_label(g_strdup_printf(
+                "Secondary monitor (%d x %d)", secondary_monitor->width,
+                secondary_monitor->height));
+
+        g_object_set_data_full(G_OBJECT(button_secondary_monitor), "monitor",
+                               (gpointer)secondary_monitor, free_monitor);
+
+        g_signal_connect(button_secondary_monitor, "clicked",
+                         G_CALLBACK(show_images), (gpointer)app);
+
+        gtk_box_pack_start(GTK_BOX(monitors_box), button_secondary_monitor,
+                           false, false, 10);
+    } else if (number_of_other_monitors > 1) {
         GtkWidget *button_other_monitors = gtk_button_new_with_label(
             g_strdup_printf("Other monitors (%d)", number_of_other_monitors));
+
+        g_object_set_data_full(G_OBJECT(button_other_monitors), "monitor",
+                               (gpointer)secondary_monitor, free_monitor);
 
         g_signal_connect(button_other_monitors, "clicked",
                          G_CALLBACK(show_images), (gpointer)app);
 
         gtk_box_pack_start(GTK_BOX(monitors_box), button_other_monitors, false,
                            false, 10);
+    } else {
+        free(secondary_monitor);
     }
 
     gtk_widget_show_all(monitors_box);

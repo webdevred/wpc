@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "config.h"
+
 #include "filesystem.h"
 #include "gui.h"
 #include "lightdm.h"
@@ -126,10 +128,11 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     int image_width = 500;
     int number_of_images;
 
-    char *source_directory = "/mnt/HDD/backgrounds/";
+    Config *config = g_object_get_data(G_OBJECT(app), "configuration");
+    char *source_directory = config->source_directory;
+
     Wallpaper *wallpapers =
         list_wallpapers(source_directory, &number_of_images);
-    g_print("hej");
 
     Monitor *monitor = g_object_get_data(G_OBJECT(button), "monitor");
 
@@ -277,6 +280,11 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
 
 static void activate(GtkApplication *app, gpointer user_data) {
     (void)user_data;
+
+    Config *config = load_config();
+    g_object_set_data_full(G_OBJECT(app), "configuration", (gpointer)config,
+                           free_config);
+
     GtkWidget *window = gtk_application_window_new(GTK_APPLICATION(app));
 
     GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);

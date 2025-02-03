@@ -3,7 +3,7 @@
 #include <glib.h>
 
 typedef struct {
-    int width;
-    int height;
+    unsigned int width;
+    unsigned int height;
     gchar *path;
 } Wallpaper;

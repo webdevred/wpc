@@ -1,41 +1,32 @@
 #include <dirent.h>
 #include <glib.h>
 #include <gtk/gtk.h>
-#include <libexif/exif-data.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include <wand/MagickWand.h>
 
 #include "filesystem.h"
 #include "wallpaper_struct.h"
 
-void extract_dimensions(ExifEntry *entry, void *data) {
-    Wallpaper *wallpaper = (Wallpaper *)data;
-    char buffer[1024];
-    exif_entry_get_value(entry, buffer, sizeof(buffer));
-
-    if (entry->tag == EXIF_TAG_IMAGE_WIDTH) {
-        wallpaper->width = atoi(buffer);
-    } else if (entry->tag == EXIF_TAG_IMAGE_LENGTH) {
-        wallpaper->height = atoi(buffer);
-    }
-}
-
 int set_resolution(Wallpaper *wallpaper) {
-    ExifData *exifData = exif_data_new_from_file(wallpaper->path);
+    MagickWandGenesis();
 
-    if (!exifData) {
+    MagickWand *wand = NewMagickWand();
+
+    if (MagickReadImage(wand, wallpaper->path) == MagickFalse) {
+        fprintf(stderr, "Failed to read image: %s\n", wallpaper->path);
         return 1;
     }
 
-    // Iterate through EXIF tags
-    for (int i = 0; i < EXIF_IFD_COUNT; i++) {
-        ExifContent *content = exifData->ifd[i];
-        if (content) {
-            exif_content_foreach_entry(content, extract_dimensions, wallpaper);
-        }
-    }
+    size_t width = MagickGetImageWidth(wand);
+    size_t height = MagickGetImageHeight(wand);
 
-    exif_data_unref(exifData);
+    wallpaper->width = width;
+    wallpaper->height = height;
+
+    DestroyMagickWand(wand);
+    MagickWandTerminus();
     return 0;
 }
 

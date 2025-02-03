@@ -9,6 +9,7 @@ CFLAGS = -Wall -Wextra -std=c23 -g3 \
          $(shell pkg-config --cflags gtk+-3.0) \
          $(shell pkg-config --cflags glib-2.0) \
          $(shell pkg-config --cflags MagickWand) \
+         $(shell pkg-config --cflags libcjson) \
          -D_POSIX_C_SOURCE=200809L
 
 LDFLAGS = $(shell pkg-config --libs gtk+-3.0) \
@@ -16,7 +17,8 @@ LDFLAGS = $(shell pkg-config --libs gtk+-3.0) \
           $(shell pkg-config --libs x11) \
           $(shell pkg-config --libs xrandr) \
           $(shell pkg-config --libs MagickWand) \
-          $(shell pkg-config --libs libexif)
+          $(shell pkg-config --libs imlib2) \
+          $(shell pkg-config --libs libcjson)
 
 # Project structure
 SRC_DIR = src
@@ -45,9 +47,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 
 ccls:
 	echo clang > .ccls
-	echo -Iinclude >> .ccls
-	echo -n $(CFLAGS) | sed 's/ /\n/g' >> .ccls
-	echo -n $(LDFLAGS) | sed 's/ /\n/g' >> .ccls
+	echo -n -Iinclude >> .ccls
+	echo -n "$(CFLAGS) $(LDFLAGS)" | sed 's/ /\n/g' | sort | uniq >> .ccls
 
 # Create build directory if it doesn't exist
 $(BUILD_DIR):
@@ -55,7 +56,7 @@ $(BUILD_DIR):
 
 install:
 	mv wpc /usr/local/bin/wpc
-	chown root:root /usr/local/bin/wpc
+	chown "root:root" /usr/local/bin/wpc
 	chmod 0755 /usr/local/bin/wpc
 	chmod u+s /usr/local/bin/wpc
 

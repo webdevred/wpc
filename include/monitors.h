@@ -1,11 +1,11 @@
 #pragma once
-
 #include <stdbool.h>
 
 typedef struct {
-    int width;
-    int height;
+    unsigned int width;
+    unsigned int height;
     bool primary;
+    char *name;
 } Monitor;
 
 extern Monitor *wm_list_monitors(int *number_of_monitors);

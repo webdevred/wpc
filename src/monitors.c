@@ -124,7 +124,7 @@ extern void dm_list_monitors(Monitor *primary_monitor,
                 primary_monitor->primary = true;
             } else {
                 unsigned int crtc_width = crtcInfo->width;
-                unsigned int crtc_height = crtcInfo->width;
+                unsigned int crtc_height = crtcInfo->height;
                 if (secondary_monitor->width < crtc_width ||
                     secondary_monitor->height < crtc_height) {
                     secondary_monitor->name =

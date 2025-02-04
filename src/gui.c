@@ -75,7 +75,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 
     if (g_strcmp0(menu_choice, "dm_background")) {
         int *socket = g_object_get_data(G_OBJECT(app), "priv_socket");
-        gchar *args = g_strdup_printf("%s %s", wallpaper->path, monitor->name);
+        gchar *args = g_strdup_printf("%s %s", monitor->name, wallpaper->path);
         write(socket[1], args, strlen(args) + 1);
     }
 }

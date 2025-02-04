@@ -104,6 +104,7 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
     } else if (errno == ENOENT) {
         if (g_mkdir_with_parents(storage_directory, 0775) != 0) {
             perror("Failed to create storage directory");
+            fflush(stderr);
             g_free(storage_directory);
             g_free(dst_filename);
             g_free(dst_file_path);
@@ -114,6 +115,7 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
 
     if (scale_image(wallpaper, tmp_file_path, monitor) != 0) {
         fprintf(stderr, "Failed to scale the image\n");
+        fflush(stderr);
         g_free(storage_directory);
         g_free(dst_filename);
         g_free(dst_file_path);
@@ -132,6 +134,7 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
         FILE *file = fopen(CONFIG_FILE, "w");
         if (file == NULL) {
             perror("Error opening configuration file for writing");
+            fflush(stderr);
             g_free(storage_directory);
             g_free(dst_filename);
             g_free(dst_file_path);
@@ -150,8 +153,11 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
             if (delimiter) {
                 *delimiter = '\0';
                 char *key = line;
-
-                if (strcmp(key, "background") == 0) {
+                if (monitor->primary == true &&
+                    strcmp(key, "background") == 0) {
+                    fprintf(file, "%s=%s\n", key, dst_file_path);
+                } else if (! monitor->primary &&
+                    strcmp(key, "other-monitors-logo") == 0) {
                     fprintf(file, "%s=%s\n", key, dst_file_path);
                 } else {
                     *delimiter = '=';
@@ -163,6 +169,7 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
             free(config[i]);
         }
         free(config);
+        fflush(file);
 
         fclose(file);
     }

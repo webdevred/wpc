@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
     if (pid == 0) {
         close(sock[1]);
         seteuid(geteuid());
-        char buffer[100];
+        char buffer[1024];
         char *delimimeter;
         while (1) {
             ssize_t bytes = read(sock[0], buffer, sizeof(buffer) - 1);
@@ -40,11 +40,12 @@ int main(int argc, char **argv) {
 
             *delimimeter = '\0';
 
-            char *wallpaper_path = buffer;
-            char *monitor_name = delimimeter + 1;
+            char *monitor_name = buffer;
+            char *wallpaper_path = delimimeter + 1;
 
-            printf("LightDM: Wallpaper: %s Monitor: %s", wallpaper_path,
+            printf("LightDM: Wallpaper %s Monitor %s\n", wallpaper_path,
                    monitor_name);
+            fflush(stdout);
             Monitor *monitor = get_monitor(monitor_name);
             Wallpaper wallpaper = get_wallpaper(wallpaper_path);
 

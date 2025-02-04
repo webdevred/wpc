@@ -98,25 +98,12 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
     gchar *tmp_file_path =
         g_strdup_printf("%s/.wpc_%s.png", g_get_home_dir(), dst_filename);
 
-    uid_t current_user = getuid();
-    uid_t root_user = geteuid();
-
-    if (seteuid(root_user) == -1) {
-        perror("Failed to switch to effective UID");
-        g_free(storage_directory);
-        g_free(dst_filename);
-        g_free(dst_file_path);
-        g_free(tmp_file_path);
-        return;
-    }
-
     DIR *dir = opendir(storage_directory);
     if (dir) {
         closedir(dir);
     } else if (errno == ENOENT) {
         if (g_mkdir_with_parents(storage_directory, 0775) != 0) {
             perror("Failed to create storage directory");
-            setuid(current_user);
             g_free(storage_directory);
             g_free(dst_filename);
             g_free(dst_file_path);
@@ -125,10 +112,8 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
         }
     }
 
-    // Scale the image and save it temporarily
     if (scale_image(wallpaper, tmp_file_path, monitor) != 0) {
         fprintf(stderr, "Failed to scale the image\n");
-        setuid(current_user);
         g_free(storage_directory);
         g_free(dst_filename);
         g_free(dst_file_path);
@@ -136,7 +121,6 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
         return;
     }
 
-    // Move the temporary file to the final location
     if (rename(tmp_file_path, dst_file_path) != 0) {
         perror("Failed to move scaled image to destination");
         unlink(tmp_file_path);
@@ -148,7 +132,6 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
         FILE *file = fopen(CONFIG_FILE, "w");
         if (file == NULL) {
             perror("Error opening configuration file for writing");
-            setuid(current_user);
             g_free(storage_directory);
             g_free(dst_filename);
             g_free(dst_file_path);
@@ -184,7 +167,6 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
         fclose(file);
     }
 
-    setuid(current_user);
     g_free(storage_directory);
     g_free(dst_filename);
     g_free(dst_file_path);

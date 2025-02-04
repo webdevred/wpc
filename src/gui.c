@@ -74,7 +74,9 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
 
     if (g_strcmp0(menu_choice, "dm_background")) {
-        lightdm_set_background(wallpaper, monitor);
+        int *socket = g_object_get_data(G_OBJECT(app), "priv_socket");
+        gchar *args = g_strdup_printf("%s %s", wallpaper->path, monitor->name);
+        write(socket[1], args, strlen(args) + 1);
     }
 }
 
@@ -327,11 +329,11 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_show_all(window);
 }
 
-extern int initialize_application(int argc, char **argv) {
+extern int initialize_application(int argc, char **argv, int *socket) {
     GtkApplication *app;
     int status;
-
     app = gtk_application_new("org.webdevred.wpc", G_APPLICATION_DEFAULT_FLAGS);
+    g_object_set_data(G_OBJECT(app), "priv_socket", (gpointer)socket);
     g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
     status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);

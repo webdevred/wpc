@@ -11,7 +11,22 @@
 #include "lightdm.h"
 #include "monitors.h"
 
+#include "feh.h"
+#include "filelist.h"
+#include "winwidget.h"
+#include "signals.h"
+#include "wallpaper.h"
+
 int main(int argc, char **argv) {
+    if (argc == 2 && strcmp(argv[1], "-b") == 0) {
+      char backgrounds[] = "/mnt/HDD/backgrounds/bakgrund.jpg";
+      init_x_and_imlib();
+      filelist = gib_list_add_front(filelist, feh_file_new(backgrounds));
+      filelist_len = gib_list_length(filelist);
+      feh_wm_set_bg_filelist(BG_MODE_FILL);
+      exit(0);
+    }
+
     int sock[2];
     pid_t pid;
 

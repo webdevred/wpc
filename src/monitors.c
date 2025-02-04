@@ -63,6 +63,8 @@ extern Monitor *wm_list_monitors(int *number_of_monitors) {
                 monitors[i].name = outputInfo->name;
                 monitors[i].width = crtcInfo->width;
                 monitors[i].height = crtcInfo->height;
+                monitors[i].horizontal_position = crtcInfo->x;
+                monitors[i].vertical_position = crtcInfo->y;
                 monitors[i].primary =
                     (screenResources->outputs[i] == primaryOutput);
 

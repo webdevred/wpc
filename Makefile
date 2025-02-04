@@ -18,12 +18,14 @@ LDFLAGS = $(shell pkg-config --libs gtk+-3.0) \
           $(shell pkg-config --libs xrandr) \
           $(shell pkg-config --libs MagickWand) \
           $(shell pkg-config --libs imlib2) \
-          $(shell pkg-config --libs libcjson)
+          $(shell pkg-config --libs libcjson) \
+	  -lm
 
 # Project structure
 SRC_DIR = src
 BUILD_DIR = build
 INCLUDE_DIR = include
+BC_DIR = bc_files
 
 # Source files and corresponding object files
 SRCS = $(wildcard $(SRC_DIR)/*.c)
@@ -32,8 +34,6 @@ OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SRCS))
 # Target executable
 TARGET = wpc
 
-# Default target (all)
-all: $(TARGET)
 
 # Rule to build the target executable
 $(TARGET): $(OBJS)
@@ -44,6 +44,21 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $< -o $@
 
 .SILENT: ccls
+
+$(BC_DIR):
+	mkdir -p $(BC_DIR)
+
+# Rule to generate LLVM bitcode for .c files
+$(BC_DIR)/%.bc: $(SRC_DIR)/%.c | $(BC_DIR)
+	$(CC) -I $(INCLUDE_DIR) $(CFLAGS) -c -emit-llvm -o $@ $<
+
+
+# Find all the .c files and generate corresponding .bc files
+BITCODE_FILES := $(patsubst $(SRC_DIR)/%.c, $(BC_DIR)/%.bc, $(wildcard $(SRC_DIR)/*.c))
+
+bc: $(BITCODE_FILES)
+
+all: $(TARGET)
 
 ccls:
 	echo clang > .ccls

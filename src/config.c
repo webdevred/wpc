@@ -5,9 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CONFIG_FILE "/home/debbie/.config/wpc/settings.json"
+#define CONFIG_FILE ".config/wpc/settings.json"
 
-void free_config(gpointer data) {
+static char *get_config_file() {
+    const gchar *home = g_get_home_dir();
+    return g_strdup_printf("%s/%s", home, CONFIG_FILE);
+}
+
+extern void free_config(gpointer data) {
     Config *config = (Config *)data;
     int number_of_monitors = config->number_of_monitors;
     free(config->source_directory);
@@ -20,8 +25,8 @@ void free_config(gpointer data) {
     free(config);
 }
 
-Config *load_config() {
-    FILE *file = fopen(CONFIG_FILE, "r");
+extern Config *load_config() {
+    FILE *file = fopen(get_config_file(), "r");
     if (file == NULL) {
         perror("Error opening configuration file");
         return NULL;
@@ -124,7 +129,12 @@ Config *load_config() {
 }
 
 // NOTE: Returns a heap allocated string, you are required to free it after use.
-void dump_config(Config *config) {
+extern void dump_config(Config *config) {
+    FILE *file = fopen(get_config_file(), "r");
+    if (file == NULL) {
+        perror("Error opening configuration file");
+        exit(1);
+    }
     char *string = NULL;
     cJSON *monitors_with_backgrounds = NULL;
 

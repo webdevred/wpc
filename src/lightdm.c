@@ -156,8 +156,8 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
                 if (monitor->primary == true &&
                     strcmp(key, "background") == 0) {
                     fprintf(file, "%s=%s\n", key, dst_file_path);
-                } else if (! monitor->primary &&
-                    strcmp(key, "other-monitors-logo") == 0) {
+                } else if (!monitor->primary &&
+                           strcmp(key, "other-monitors-logo") == 0) {
                     fprintf(file, "%s=%s\n", key, dst_file_path);
                 } else {
                     *delimiter = '=';

@@ -23,66 +23,57 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-#include "feh.h"
 #include "debug.h"
+#include "feh.h"
 
 /* eprintf: print error message and exit */
-void eprintf(char *fmt, ...)
-{
-	va_list args;
+void eprintf(char *fmt, ...) {
+    va_list args;
 
-	fflush(stdout);
+    fflush(stdout);
 
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	va_end(args);
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
 
-	if (fmt[0] != '\0' && fmt[strlen(fmt) - 1] == ':')
-		fprintf(stderr, " %s", strerror(errno));
-	fputs("\n", stderr);
-	exit(2);
+    if (fmt[0] != '\0' && fmt[strlen(fmt) - 1] == ':')
+        fprintf(stderr, " %s", strerror(errno));
+    fputs("\n", stderr);
+    exit(2);
 }
 
 /* weprintf: print warning message and continue */
-void weprintf(char *fmt, ...)
-{
-	va_list args;
+void weprintf(char *fmt, ...) {
+    va_list args;
 
-	fflush(stdout);
+    fflush(stdout);
 
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	va_end(args);
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
 
-	if (fmt[0] != '\0' && fmt[strlen(fmt) - 1] == ':')
-		fprintf(stderr, " %s", strerror(errno));
-	fputs("\n", stderr);
+    if (fmt[0] != '\0' && fmt[strlen(fmt) - 1] == ':')
+        fprintf(stderr, " %s", strerror(errno));
+    fputs("\n", stderr);
 }
 
 /* estrdup: duplicate a string, report if error */
-char *_estrdup(char *s)
-{
-	char *t;
+char *_estrdup(char *s) {
+    char *t;
 
-	if (!s)
-		return NULL;
+    if (!s) return NULL;
 
-	t = (char *) malloc(strlen(s) + 1);
-	if (t == NULL)
-		eprintf("estrdup(\"%.20s\") failed:", s);
-	strcpy(t, s);
-	return t;
+    t = (char *)malloc(strlen(s) + 1);
+    if (t == NULL) eprintf("estrdup(\"%.20s\") failed:", s);
+    strcpy(t, s);
+    return t;
 }
 
 /* emalloc: malloc and report if error */
-void *_emalloc(size_t n)
-{
-	void *p;
+void *_emalloc(size_t n) {
+    void *p;
 
-	p = malloc(n);
-	if (p == NULL)
-		eprintf("malloc of %u bytes failed:", n);
-	return p;
+    p = malloc(n);
+    if (p == NULL) eprintf("malloc of %u bytes failed:", n);
+    return p;
 }
-
-

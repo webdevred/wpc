@@ -24,6 +24,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "gib_style.h"
-#include "utils.h"
 #include "debug.h"
-
+#include "utils.h"

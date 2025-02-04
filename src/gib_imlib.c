@@ -82,7 +82,7 @@ void gib_imlib_render_image_part_on_drawable_at_size(
     imlib_context_set_blend(blend);
     imlib_context_set_angle(0);
     imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
-} 
+}
 
 char *gib_imlib_image_format(Imlib_Image im) {
     imlib_context_set_image(im);
@@ -107,4 +107,3 @@ void gib_imlib_save_image(Imlib_Image im, char *file) {
     }
     imlib_save_image(file);
 }
-

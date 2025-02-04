@@ -202,6 +202,8 @@ static void wm_show_monitors(GtkButton *button, gpointer user_data) {
 
     for (int monitor_id = 0; monitor_id < number_of_monitors; monitor_id++) {
         Monitor monitor = monitors[monitor_id];
+        printf("%dx%d\n", monitor.horizontal_position,
+               monitor.vertical_position);
 
         gchar *resoulution = log_resolution(monitor.width, monitor.height);
         GtkWidget *button = gtk_button_new_with_label(resoulution);

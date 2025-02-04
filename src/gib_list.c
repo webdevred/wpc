@@ -23,46 +23,38 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-#include <time.h>
 #include "gib_list.h"
-#include "utils.h"
 #include "debug.h"
+#include "utils.h"
+#include <time.h>
 
-gib_list *
-gib_list_new(void)
-{
-   gib_list *l;
+gib_list *gib_list_new(void) {
+    gib_list *l;
 
-   l = (gib_list *) emalloc(sizeof(gib_list));
-   l->data = NULL;
-   l->next = NULL;
-   l->prev = NULL;
-   return (l);
+    l = (gib_list *)emalloc(sizeof(gib_list));
+    l->data = NULL;
+    l->next = NULL;
+    l->prev = NULL;
+    return (l);
 }
 
-extern gib_list *
-gib_list_add_front(gib_list * root, void *data)
-{
-   gib_list *l;
+extern gib_list *gib_list_add_front(gib_list *root, void *data) {
+    gib_list *l;
 
-   l = gib_list_new();
-   l->next = root;
-   l->data = data;
-   if (root)
-      root->prev = l;
-   return (l);
+    l = gib_list_new();
+    l->next = root;
+    l->data = data;
+    if (root) root->prev = l;
+    return (l);
 }
 
-int
-gib_list_length(gib_list * l)
-{
-   int length;
+int gib_list_length(gib_list *l) {
+    int length;
 
-   length = 0;
-   while (l)
-   {
-      length++;
-      l = l->next;
-   }
-   return (length);
+    length = 0;
+    while (l) {
+        length++;
+        l = l->next;
+    }
+    return (length);
 }

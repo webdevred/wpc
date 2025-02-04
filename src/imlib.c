@@ -415,5 +415,4 @@ void im_weprintf(winwidget w, char *fmt, ...) {
     if (!w) free(errstr);
 }
 
-
 unsigned char reset_output = 0;

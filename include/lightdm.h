@@ -1,6 +1,7 @@
 #pragma once
 #include "monitors.h"
-#include "wallpaper_struct.h"
 #include <glib.h>
+
+extern int parse_config(char ***config_ptr, int *lines_ptr);
 
 extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor);

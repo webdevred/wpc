@@ -27,8 +27,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <limits.h>
 #include <sys/stat.h>
 
+#include "monitors.h"
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xlib.h>
+#include <X11/Xos.h>
+#include <X11/Xresource.h>
+#include <X11/Xutil.h>
+#include <X11/keysym.h>
+
+#include <Imlib2.h>
+#include "gib_imlib.h"
+#include "logging.h"
 #include "config.h"
-#include "feh.h"
 #include "filesystem.h"
 #include "wallpaper.h"
 
@@ -36,12 +47,39 @@ Window ipc_win = None;
 Window my_ipc_win = None;
 Atom ipc_atom = None;
 
-/*
- * This is a boolean indicating
- * That while we seem to see E16 IPC
- * it's actually E17 faking it
- * -- richlowe 2005-06-22
- */
+Display *disp = NULL;
+Visual *vis = NULL;
+Screen *scr = NULL;
+Colormap cm;
+int depth;
+Atom wmDeleteWindow;
+XContext xid_context = 0;
+Window root = 0;
+
+int childpid = 0;
+
+void init_x_and_imlib(void) {
+    init_disp(&disp, &root);
+    vis = DefaultVisual(disp, DefaultScreen(disp));
+    depth = DefaultDepth(disp, DefaultScreen(disp));
+    cm = DefaultColormap(disp, DefaultScreen(disp));
+
+    scr = ScreenOfDisplay(disp, DefaultScreen(disp));
+    xid_context = XUniqueContext();
+
+    imlib_context_set_display(disp);
+    imlib_context_set_visual(vis);
+    imlib_context_set_colormap(cm);
+    imlib_context_set_color_modifier(NULL);
+    imlib_context_set_progress_function(NULL);
+    imlib_context_set_operation(IMLIB_OP_COPY);
+    wmDeleteWindow = XInternAtom(disp, "WM_DELETE_WINDOW", False);
+
+    imlib_set_cache_size(1024 * 1024);
+
+    return;
+}
+
 
 static void feh_wm_set_bg_scaled(Pixmap pmap, Imlib_Image im, int x, int y,
                                  int w, int h) {
@@ -144,8 +182,6 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
     Window root2;
     int depth2;
 
-    D(("Falling back to XSetRootWindowPixmap\n"));
-
     XColor color;
     Colormap cmap = DefaultColormap(disp, DefaultScreen(disp));
 
@@ -175,8 +211,6 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
 #endif /* HAVE_LIBXINERAMA */
             feh_wm_set_bg_scaled(pmap_d1, im, 0, 0, scr->width, scr->height);
     } else if (bgmode == BG_MODE_CENTER) {
-
-        D(("centering\n"));
 
         pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
         gcval.foreground = color.pixel;
@@ -208,9 +242,9 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
             char *wallpaper_path = monitors->image_path;
             im = imlib_load_image(wallpaper_path);
 
-            printf("set filled bg: %s %s %d %d %d %d\n", monitor->name,
+            logprintf(INFO, g_strdup_printf("set filled bg: %s %s %d %d %d %d", monitor->name,
                    wallpaper_path, monitor->width, monitor->height,
-                   monitor->horizontal_position, monitor->vertical_position);
+                                    monitor->horizontal_position, monitor->vertical_position));
 
             feh_wm_set_bg_filled(pmap_d1, im, monitor->horizontal_position,
                                  monitor->vertical_position, monitor->width,
@@ -224,7 +258,7 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
 
     /* create new display, copy pixmap to new display */
     disp2 = XOpenDisplay(NULL);
-    if (!disp2) eprintf("Can't reopen X display.");
+    if (!disp2) logprintf(ERROR, "Can't reopen X display.");
     root2 = RootWindow(disp2, DefaultScreen(disp2));
     depth2 = DefaultDepth(disp2, DefaultScreen(disp2));
     XSync(disp, False);
@@ -267,7 +301,7 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
     prop_esetroot = XInternAtom(disp2, "ESETROOT_PMAP_ID", False);
 
     if (prop_root == None || prop_esetroot == None)
-        eprintf("creation of pixmap property failed.");
+      logprintf(ERROR, "creation of pixmap property failed.");
 
     XChangeProperty(disp2, root2, prop_root, XA_PIXMAP, 32, PropModeReplace,
                     (unsigned char *)&pmap_d2, 1);

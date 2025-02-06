@@ -25,7 +25,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
-#include "gib_style.h"
 #include <Imlib2.h>
 #include <X11/Xlib.h>
 #include <ctype.h>
@@ -92,11 +91,6 @@ void gib_imlib_render_image_part_on_drawable_at_size_with_rotation(
 
 void gib_imlib_image_fill_rectangle(Imlib_Image im, int x, int y, int w, int h,
                                     int r, int g, int b, int a);
-void gib_imlib_text_draw(Imlib_Image im, Imlib_Font fn, gib_style *s, int x,
-                         int y, char *text, Imlib_Text_Direction dir, int r,
-                         int g, int b, int a);
-void gib_imlib_get_text_size(Imlib_Font fn, char *text, gib_style *s, int *w,
-                             int *h, Imlib_Text_Direction dir);
 Imlib_Image gib_imlib_clone_image(Imlib_Image im);
 char *gib_imlib_image_format(Imlib_Image im);
 char **gib_imlib_list_fonts(int *num);

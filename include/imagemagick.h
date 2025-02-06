@@ -1,5 +1,4 @@
 #pragma once
-#include "monitors.h"
-#include "wallpaper_struct.h"
+#include "structs.h"
 
-int scale_image(Wallpaper *src_image, char *dst_image_path, Monitor *monitor);
+int set_resolution(Wallpaper *wallpaper);

@@ -6,31 +6,22 @@
 #include <X11/extensions/Xrandr.h>
 
 #include "monitors.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-void init_disp(Display **display, Window *root,
-               XRRScreenResources **screen_resources) {
-    *display = XOpenDisplay(NULL);
-    if (*display == NULL) {
-        fprintf(stderr, "Unable to open X display\n");
-        exit(1);
-    }
-
-    *root = DefaultRootWindow(*display);
-
-    *screen_resources = XRRGetScreenResources(*display, *root);
-    if (*screen_resources == NULL) {
-        fprintf(stderr, "Unable to get screen resources\n");
-        XCloseDisplay(*display);
-        exit(1);
-    }
-}
+#include "strings.h"
+#include "monitors.h"
+#include "structs.h"
 
 extern Monitor *wm_list_monitors(int *number_of_monitors) {
     Display *display;
     Window root;
-    XRRScreenResources *screenResources;
+    XRRScreenResources *screen_resources;
 
-    init_disp(&display, &root, &screenResources);
+    init_disp(&display, &root);
+
+    get_screen_resources(&display, &root, &screen_resources);
 
     XRROutputInfo *outputInfo;
     XRRCrtcInfo *crtcInfo;
@@ -42,13 +33,13 @@ extern Monitor *wm_list_monitors(int *number_of_monitors) {
     *number_of_monitors = 0;
     Monitor *monitors = NULL;
 
-    for (int i = 0; i < screenResources->noutput; i++) {
-        outputInfo = XRRGetOutputInfo(display, screenResources,
-                                      screenResources->outputs[i]);
+    for (int i = 0; i < screen_resources->noutput; i++) {
+        outputInfo = XRRGetOutputInfo(display, screen_resources,
+                                      screen_resources->outputs[i]);
 
         if (outputInfo->connection == RR_Connected) {
             crtcInfo =
-                XRRGetCrtcInfo(display, screenResources, outputInfo->crtc);
+                XRRGetCrtcInfo(display, screen_resources, outputInfo->crtc);
             if (crtcInfo) {
                 (*number_of_monitors)++;
                 monitors =
@@ -61,7 +52,7 @@ extern Monitor *wm_list_monitors(int *number_of_monitors) {
                 monitors[i].horizontal_position = crtcInfo->x;
                 monitors[i].vertical_position = crtcInfo->y;
                 monitors[i].primary =
-                    (screenResources->outputs[i] == primaryOutput);
+                    (screen_resources->outputs[i] == primaryOutput);
 
                 XRRFreeCrtcInfo(crtcInfo);
             }
@@ -70,7 +61,7 @@ extern Monitor *wm_list_monitors(int *number_of_monitors) {
         XRRFreeOutputInfo(outputInfo);
     }
 
-    XRRFreeScreenResources(screenResources);
+    XRRFreeScreenResources(screen_resources);
     XCloseDisplay(display);
 
     return monitors;
@@ -81,9 +72,10 @@ extern void dm_list_monitors(Monitor *primary_monitor,
                              int *number_of_other_monitors) {
     Display *display;
     Window root;
-    XRRScreenResources *screenResources;
+    XRRScreenResources *screen_resources;
 
-    init_disp(&display, &root, &screenResources);
+    init_disp(&display, &root);
+    get_screen_resources(&display, &root, &screen_resources);
 
     XRROutputInfo *outputInfo;
     XRRCrtcInfo *crtcInfo;
@@ -99,19 +91,19 @@ extern void dm_list_monitors(Monitor *primary_monitor,
 
     if (primary_monitor == NULL) {
         fprintf(stderr, "Failed to allocate memory for monitors\n");
-        XRRFreeScreenResources(screenResources);
+        XRRFreeScreenResources(screen_resources);
         XCloseDisplay(display);
         exit(1);
     }
 
-    for (int i = 0; i < screenResources->noutput; i++) {
-        outputInfo = XRRGetOutputInfo(display, screenResources,
-                                      screenResources->outputs[i]);
+    for (int i = 0; i < screen_resources->noutput; i++) {
+        outputInfo = XRRGetOutputInfo(display, screen_resources,
+                                      screen_resources->outputs[i]);
 
         if (outputInfo->connection == RR_Connected) {
             crtcInfo =
-                XRRGetCrtcInfo(display, screenResources, outputInfo->crtc);
-            if (crtcInfo && screenResources->outputs[i] == primaryOutput) {
+                XRRGetCrtcInfo(display, screen_resources, outputInfo->crtc);
+            if (crtcInfo && screen_resources->outputs[i] == primaryOutput) {
                 primary_monitor->name =
                     malloc((strlen(outputInfo->name) + 1) * sizeof(char));
                 strcpy(primary_monitor->name, outputInfo->name);
@@ -138,60 +130,6 @@ extern void dm_list_monitors(Monitor *primary_monitor,
         XRRFreeOutputInfo(outputInfo);
     }
 
-    XRRFreeScreenResources(screenResources);
+    XRRFreeScreenResources(screen_resources);
     XCloseDisplay(display);
-}
-
-extern Monitor *get_monitor(char *monitor_name) {
-    Display *display;
-    Window root;
-    XRRScreenResources *screenResources;
-
-    init_disp(&display, &root, &screenResources);
-
-    XRROutputInfo *outputInfo;
-    XRRCrtcInfo *crtcInfo;
-
-    RROutput primaryOutput;
-
-    primaryOutput = XRRGetOutputPrimary(display, root);
-
-    Monitor *monitor = malloc(sizeof(Monitor));
-    if (monitor == NULL) {
-        fprintf(stderr, "Failed to allocate memory for monitors\n");
-        XRRFreeScreenResources(screenResources);
-        XCloseDisplay(display);
-        exit(1);
-    }
-
-    for (int i = 0; i < screenResources->noutput; i++) {
-        outputInfo = XRRGetOutputInfo(display, screenResources,
-                                      screenResources->outputs[i]);
-
-        if (outputInfo->connection == RR_Connected &&
-            strcmp(monitor_name, outputInfo->name) == 0) {
-            crtcInfo =
-                XRRGetCrtcInfo(display, screenResources, outputInfo->crtc);
-            if (crtcInfo) {
-                monitor->name =
-                    malloc((strlen(monitor_name) + 1) * sizeof(char));
-                strcpy(monitor->name, monitor_name);
-                monitor->width = crtcInfo->width;
-                monitor->height = crtcInfo->height;
-                monitor->horizontal_position = crtcInfo->x;
-                monitor->vertical_position = crtcInfo->y;
-                monitor->primary =
-                    (screenResources->outputs[i] == primaryOutput);
-
-                XRRFreeCrtcInfo(crtcInfo);
-            }
-        }
-
-        XRRFreeOutputInfo(outputInfo);
-    }
-
-    XRRFreeScreenResources(screenResources);
-    XCloseDisplay(display);
-
-    return monitor;
 }

@@ -4,31 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <wand/MagickWand.h>
-
+#include "wpc.h"
 #include "filesystem.h"
-#include "wallpaper_struct.h"
-
-int set_resolution(Wallpaper *wallpaper) {
-    MagickWandGenesis();
-
-    MagickWand *wand = NewMagickWand();
-
-    if (MagickReadImage(wand, wallpaper->path) == MagickFalse) {
-        fprintf(stderr, "Failed to read image: %s\n", wallpaper->path);
-        return 1;
-    }
-
-    size_t width = MagickGetImageWidth(wand);
-    size_t height = MagickGetImageHeight(wand);
-
-    wallpaper->width = width;
-    wallpaper->height = height;
-
-    DestroyMagickWand(wand);
-    MagickWandTerminus();
-    return 0;
-}
+#include "imagemagick.h"
 
 extern Wallpaper *list_wallpapers(gchar *source_directory,
                                   int *number_of_images) {
@@ -64,8 +42,6 @@ extern Wallpaper *list_wallpapers(gchar *source_directory,
             strcpy(wallpaper->path, source_directory);
             strcat(wallpaper->path, filename);
             set_resolution(wallpaper);
-            printf("Image: %s Res %dx%d", wallpaper->path, wallpaper->width,
-                   wallpaper->height);
             wallpaper_array_size++;
         }
     }
@@ -78,14 +54,4 @@ extern Wallpaper *list_wallpapers(gchar *source_directory,
     *number_of_images = wallpaper_array_size;
 
     return wallpaper_array;
-}
-
-extern Wallpaper get_wallpaper(gchar *wallpaper_path) {
-    Wallpaper wallpaper;
-
-    wallpaper.path = wallpaper_path;
-
-    set_resolution(&wallpaper);
-
-    return wallpaper;
 }

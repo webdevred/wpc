@@ -28,8 +28,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define WALLPAPER_H
 
 #include "config.h"
-#include "feh.h"
 #include "monitors.h"
+
+enum bgmode_type {
+    BG_MODE_NONE = 0,
+    BG_MODE_TILE,
+    BG_MODE_CENTER,
+    BG_MODE_SCALE,
+    BG_MODE_FILL,
+    BG_MODE_MAX
+};
 
 #define IPC_TIMEOUT ((char *)1)
 #define IPC_FAKE ((char *)2) /* Faked IPC */
@@ -39,9 +47,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         char *reply = enl_send_and_wait("nop");                                \
         if ((reply != IPC_FAKE) && (reply != IPC_TIMEOUT)) free(reply);        \
     } while (0)
-
-extern Window ipc_win;
-extern Atom ipc_atom;
 
 extern void set_wallpapers(void);
 #endif

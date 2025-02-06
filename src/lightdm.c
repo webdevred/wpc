@@ -1,60 +1,16 @@
-#include "imagemagick.h"
-#include "monitors.h"
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <wand/MagickWand.h>
 
-#define CONFIG_FILE "/etc/lightdm/slick-greeter.conf"
-#define MAX_LINE_LENGTH 1024
+#include "wpc.h"
+#include "lightdm_common.h"
+#include "lightdm.h"
+#include "monitors.h"
+#include "resolution_scaling.h"
 
-static int parse_config(char ***config_ptr, int *lines_ptr) {
-    FILE *file = fopen(CONFIG_FILE, "r");
-    if (file == NULL) {
-        perror("Error opening configuration file");
-        return -1;
-    }
-
-    int lines = 0;
-    char **config = NULL;
-    char line[MAX_LINE_LENGTH];
-
-    while (fgets(line, sizeof(line), file)) {
-        // Strip newline character
-        line[strcspn(line, "\n")] = '\0';
-
-        char **temp = realloc(config, (lines + 1) * sizeof(char *));
-        if (temp == NULL) {
-            perror("Error reallocating memory");
-            fclose(file);
-            for (int i = 0; i < lines; i++) {
-                free(config[i]);
-            }
-            free(config);
-            return -1;
-        }
-        config = temp;
-
-        config[lines] = strdup(line);
-        if (config[lines] == NULL) {
-            perror("Error allocating memory for line");
-            fclose(file);
-            for (int i = 0; i < lines; i++) {
-                free(config[i]);
-            }
-            free(config);
-            return -1;
-        }
-        lines++;
-    }
-
-    fclose(file);
-
-    *config_ptr = config;
-    *lines_ptr = lines;
-    return 0;
-}
 
 extern void lightdm_get_backgrounds(char **primary_monitor,
                                     char **other_monitor) {
@@ -86,7 +42,7 @@ extern void lightdm_get_backgrounds(char **primary_monitor,
     free(config);
 }
 
-void format_dst_filename(gchar **dst_filename) {
+static void format_dst_filename(gchar **dst_filename) {
     gchar *str = *dst_filename;
     int i = 0, j = 0;
     int len = strlen(str);
@@ -119,96 +75,93 @@ void format_dst_filename(gchar **dst_filename) {
     }
 }
 
-extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
-    gchar base_dir[] = "/usr/share/backgrounds/wpc/versions";
-    gchar *storage_directory =
-        g_strdup_printf("%s/%dx%d", base_dir, monitor->width, monitor->height);
-    gchar *dst_filename = g_path_get_basename(wallpaper->path);
-    format_dst_filename(&dst_filename);
-
-    gchar *dst_file_path =
-        g_strdup_printf("%s/%s.png", storage_directory, dst_filename);
-    gchar *tmp_file_path =
-        g_strdup_printf("%s/.wpc_%s.png", g_get_home_dir(), dst_filename);
-
-    DIR *dir = opendir(storage_directory);
-    if (dir) {
-        closedir(dir);
-    } else if (errno == ENOENT) {
-        if (g_mkdir_with_parents(storage_directory, 0775) != 0) {
-            perror("Failed to create storage directory");
-            fflush(stderr);
-            g_free(storage_directory);
-            g_free(dst_filename);
-            g_free(dst_file_path);
-            g_free(tmp_file_path);
-            return;
-        }
+static int scale_image(Wallpaper *src_image, char *dst_image_path, Monitor *monitor) {
+#define ThrowWandException(wand)                                               \
+    {                                                                          \
+        char *description;                                                     \
+                                                                               \
+        ExceptionType severity;                                                \
+                                                                               \
+        description = MagickGetException(wand, &severity);                     \
+        (void)fprintf(stderr, "%s %s %lu %s\n", GetMagickModule(),             \
+                      description);                                            \
+        description = (char *)MagickRelinquishMemory(description);             \
+        exit(-1);                                                              \
     }
 
+    MagickBooleanType status;
+
+    MagickWand *magick_wand;
+
+    MagickWandGenesis();
+    magick_wand = NewMagickWand();
+    status = MagickReadImage(magick_wand, src_image->path);
+    if (status == MagickFalse) ThrowWandException(magick_wand);
+
+    int aspect_image_height =
+        scale_height(src_image->width, src_image->height, monitor->width);
+    int vertical_offset = (int)((aspect_image_height - monitor->height) / 2);
+
+    if (vertical_offset < 0) vertical_offset = 0;
+
+    MagickResetIterator(magick_wand);
+    if (MagickNextImage(magick_wand) != MagickFalse) {
+        MagickResizeImage(magick_wand, monitor->width, aspect_image_height,
+                          LanczosFilter, 1.0);
+        MagickCropImage(magick_wand, monitor->width, monitor->height, 0,
+                        vertical_offset);
+    }
+
+    status = MagickWriteImages(magick_wand, dst_image_path, MagickTrue);
+    if (status == MagickFalse) ThrowWandException(magick_wand);
+    magick_wand = DestroyMagickWand(magick_wand);
+    MagickWandTerminus();
+    return (0);
+}
+
+extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
+    gchar *new_filename = g_path_get_basename(wallpaper->path);
+    format_dst_filename(&new_filename);
+    gchar *tmp_file_path =
+        g_strdup_printf("%s/.wpc_%s.png", g_get_home_dir(), new_filename);
     if (scale_image(wallpaper, tmp_file_path, monitor) != 0) {
-        fprintf(stderr, "Failed to scale the image\n");
         fflush(stderr);
-        g_free(storage_directory);
-        g_free(dst_filename);
-        g_free(dst_file_path);
         g_free(tmp_file_path);
+        logprintf(ERROR, "Failed to scale image");
+    }
+
+    gchar *args = serialize_args(monitor->name, wallpaper->path);
+
+    gchar *argv[] = {"/usr/local/libexec/wpc_helper", NULL};
+    GError *error = NULL;
+    GPid child_pid;
+    gint in_fd, out_fd, err_fd;
+
+    if (!g_spawn_async_with_pipes(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD,
+                                  NULL, NULL, &child_pid, &in_fd, &out_fd,
+                                  &err_fd, &error)) {
+        g_print("Failed to spawn helper: %s\n", error->message);
+        g_error_free(error);
+        free(args);
         return;
     }
 
-    if (rename(tmp_file_path, dst_file_path) != 0) {
-        perror("Failed to move scaled image to destination");
-        unlink(tmp_file_path);
+    write(in_fd, args, strlen(args));
+
+    free(args);
+
+    char buffer[256];
+    ssize_t count = read(out_fd, buffer, sizeof(buffer) - 1);
+    if (count > 0) {
+        buffer[count] = '\0';
+        g_print("Response from helper: %s\n", buffer);
+    } else {
+        g_print("No response from helper.\n");
     }
 
-    char **config = NULL;
-    int lines = 0;
-    if (parse_config(&config, &lines) == 0) {
-        FILE *file = fopen(CONFIG_FILE, "w");
-        if (file == NULL) {
-            perror("Error opening configuration file for writing");
-            fflush(stderr);
-            g_free(storage_directory);
-            g_free(dst_filename);
-            g_free(dst_file_path);
-            g_free(tmp_file_path);
-            for (int i = 0; i < lines; i++) {
-                free(config[i]);
-            }
-            free(config);
-            return;
-        }
+    close(in_fd);
+    close(out_fd);
+    close(err_fd);
 
-        for (int i = 0; i < lines; i++) {
-            char *line = config[i];
-            char *delimiter = strchr(line, '=');
-
-            if (delimiter) {
-                *delimiter = '\0';
-                char *key = line;
-                if (monitor->primary == true &&
-                    strcmp(key, "background") == 0) {
-                    fprintf(file, "%s=%s\n", key, dst_file_path);
-                } else if (!monitor->primary &&
-                           strcmp(key, "other-monitors-logo") == 0) {
-                    fprintf(file, "%s=%s\n", key, dst_file_path);
-                } else {
-                    *delimiter = '=';
-                    fprintf(file, "%s\n", line);
-                }
-            } else {
-                fprintf(file, "%s\n", line);
-            }
-            free(config[i]);
-        }
-        free(config);
-        fflush(file);
-
-        fclose(file);
-    }
-
-    g_free(storage_directory);
-    g_free(dst_filename);
-    g_free(dst_file_path);
-    g_free(tmp_file_path);
+    g_spawn_close_pid(child_pid);
 }

@@ -24,7 +24,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "gib_imlib.h"
-#include "debug.h"
 #include "utils.h"
 
 int gib_imlib_image_get_width(Imlib_Image im) {

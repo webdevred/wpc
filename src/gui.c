@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "config.h"
+#include "logging.h"
 
 #include "filesystem.h"
 #include "gui.h"
@@ -12,15 +13,8 @@
 #include "monitors.h"
 #include "resolution_scaling.h"
 #include "wallpaper.h"
-#include "wallpaper_struct.h"
-
-static gchar *log_resolution(int x, int y) {
-    char *format = "%d x %d";
-    int expected_length = snprintf(NULL, 0, format, x, y) + 1;
-    gchar *output = malloc(expected_length * sizeof(gchar));
-    sprintf(output, format, x, y);
-    return output;
-}
+#include "imagemagick.h"
+#include "strings.h"
 
 extern void g_free_config(gpointer data) {
     Config *config = (Config *)data;
@@ -43,8 +37,8 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 
     Wallpaper *wallpaper = get_flow_child_wallpaper(selected_children);
 
-    g_print("Clicked image %s Selected monitor: %dx%d\n", wallpaper->path,
-            monitor->width, monitor->height);
+    logprintf(INFO, g_strdup_printf("Clicked image %s Selected monitor: %dx%d\n", wallpaper->path,
+                              monitor->width, monitor->height));
 
     GtkButton *button_menu_choice =
         g_object_get_data(G_OBJECT(app), "menu_choice");
@@ -52,11 +46,8 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
     gchar *menu_choice =
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
 
-    printf("%s\n", menu_choice);
     if (g_strcmp0(menu_choice, "dm_background") == 0) {
-        int *socket = g_object_get_data(G_OBJECT(app), "priv_socket");
-        gchar *args = g_strdup_printf("%s %s", monitor->name, wallpaper->path);
-        write(socket[1], args, strlen(args) + 1);
+      lightdm_set_background(wallpaper,monitor);
     } else {
         Config *config = g_object_get_data(G_OBJECT(app), "configuration");
         char *monitor_name = monitor->name;
@@ -71,15 +62,12 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 
         bool found = false;
 
+        logprintf(INFO,"trying to update monitor in existing configuration");
         for (int i = 0; i < number_of_monitors; i++) {
-
-            printf("Checking monitor %d: %s\n", i, monitors[i].name);
-
             if (monitors[i].name &&
                 strcmp(monitors[i].name, monitor_name) == 0) {
                 free(monitors[i].image_path);
-                monitors[i].image_path =
-                    strdup(wallpaper_path);
+                monitors[i].image_path = strdup(wallpaper_path);
                 found = true;
                 break;
             }
@@ -97,10 +85,8 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
             config->monitors_with_backgrounds = new_list;
             MonitorBackgroundPair *new_monitor = &new_list[number_of_monitors];
 
-            new_monitor->name =
-                strdup(monitor_name);
-            new_monitor->image_path =
-                strdup(wallpaper_path);
+            new_monitor->name = strdup(monitor_name);
+            new_monitor->image_path = strdup(wallpaper_path);
 
             config->number_of_monitors++;
         }
@@ -375,7 +361,6 @@ extern int initialize_application(int argc, char **argv, int *socket) {
     GtkApplication *app;
     int status;
     app = gtk_application_new("org.webdevred.wpc", G_APPLICATION_DEFAULT_FLAGS);
-    g_object_set_data(G_OBJECT(app), "priv_socket", (gpointer)socket);
     g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
     status = g_application_run(G_APPLICATION(app), argc, argv);
     g_object_unref(app);

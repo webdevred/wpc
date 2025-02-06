@@ -6,20 +6,19 @@ CC = gcc
 
 # Flags for compiling and linking
 CFLAGS = -Wall -Wextra -std=c23 -g3 \
-         $(shell pkg-config --cflags gtk+-3.0) \
+         $(shell pkg-config --cflags gtk4) \
          $(shell pkg-config --cflags glib-2.0) \
          $(shell pkg-config --cflags MagickWand) \
          $(shell pkg-config --cflags libcjson) \
          -D_POSIX_C_SOURCE=200809L
 
-LDFLAGS = $(shell pkg-config --libs gtk+-3.0) \
+LDFLAGS = $(shell pkg-config --libs gtk4) \
           $(shell pkg-config --libs glib-2.0) \
           $(shell pkg-config --libs x11) \
           $(shell pkg-config --libs xrandr) \
           $(shell pkg-config --libs MagickWand) \
           $(shell pkg-config --libs imlib2) \
-          $(shell pkg-config --libs libcjson) \
-	  -lm
+          $(shell pkg-config --libs libcjson)
 
 # Project structure
 SRC_DIR = src

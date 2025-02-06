@@ -11,8 +11,8 @@
 #include "lightdm.h"
 #include "monitors.h"
 #include "resolution_scaling.h"
-#include "wallpaper_struct.h"
 #include "wallpaper.h"
+#include "wallpaper_struct.h"
 
 static gchar *log_resolution(int x, int y) {
     char *format = "%d x %d";
@@ -27,36 +27,8 @@ extern void g_free_config(gpointer data) {
     free_config(config);
 }
 
-static void show_image(GtkWidget *image, const gchar *image_path,
-                       const int new_image_width) {
-    gtk_image_set_from_file(GTK_IMAGE(image), image_path);
-    GdkPixbuf *pixbuf = gtk_image_get_pixbuf(GTK_IMAGE(image));
-    if (pixbuf) {
-        int original_width = gdk_pixbuf_get_width(pixbuf);
-        int original_height = gdk_pixbuf_get_height(pixbuf);
-
-        int new_height =
-            scale_height(original_width, original_height, new_image_width);
-
-        gchar *old_res = log_resolution(original_width, original_height);
-        gchar *new_res = log_resolution(new_image_width, new_height);
-
-        g_print("Image path: %-40s Original resolution: %-10s New resolution: "
-                "%-10s\n",
-                image_path, old_res, new_res);
-
-        GdkPixbuf *scaled_pixbuf = gdk_pixbuf_scale_simple(
-            pixbuf, new_image_width, new_height, GDK_INTERP_BILINEAR);
-
-        gtk_image_set_from_pixbuf(GTK_IMAGE(image), scaled_pixbuf);
-
-        gtk_widget_set_size_request(image, new_image_width, new_height);
-        g_object_unref(scaled_pixbuf);
-    }
-}
-
 static Wallpaper *get_flow_child_wallpaper(GtkFlowBoxChild *flow_child) {
-    GtkWidget *image = gtk_bin_get_child(GTK_BIN(flow_child));
+    GtkWidget *image = gtk_flow_box_child_get_child(flow_child);
 
     Wallpaper *wallpaper = g_object_get_data(G_OBJECT(image), "wallpaper");
     return wallpaper;
@@ -171,22 +143,22 @@ static void free_monitors(gpointer data) {
     free(monitors);
 }
 
-static void destroy_all_widgets(GtkContainer *container) {
-    if (container == NULL) {
-        return;
-    }
+/* static void destroy_all_widgets(GtkWidget *container) { */
+/*     if (container == NULL) { */
+/*         return; */
+/*     } */
 
-    GList *children, *iter;
+/*     GList *children, *iter; */
 
-    children = gtk_container_get_children(container);
+/*     children = gtk_container_get_children(container); */
 
-    for (iter = children; iter != NULL; iter = iter->next) {
-        GtkWidget *child = GTK_WIDGET(iter->data);
-        gtk_widget_destroy(child);
-    }
+/*     for (iter = children; iter != NULL; iter = iter->next) { */
+/*         GtkWidget *child = GTK_WIDGET(iter->data); */
+/*         gtk_widget_destroy(child); */
+/*     } */
 
-    g_list_free(children);
-}
+/*     g_list_free(children); */
+/* } */
 
 static gint sort_flow_images(GtkFlowBoxChild *child1, GtkFlowBoxChild *child2,
                              gpointer user_data) {
@@ -231,8 +203,8 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     if (g_object_get_data(G_OBJECT(app), "flowbox")) return;
 
     GtkWidget *vbox = g_object_get_data(G_OBJECT(app), "vbox");
-    GtkWidget *scrolled_window = gtk_scrolled_window_new (NULL, NULL);
-    gtk_container_add(GTK_CONTAINER(vbox), scrolled_window);
+    GtkWidget *scrolled_window = gtk_scrolled_window_new();
+    gtk_box_append(GTK_BOX(vbox), scrolled_window);
 
     GtkWidget *flowbox = gtk_flow_box_new();
     gtk_flow_box_set_max_children_per_line(GTK_FLOW_BOX(flowbox), 4);
@@ -240,18 +212,17 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     g_object_set_data(G_OBJECT(app), "flowbox", flowbox);
     gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), 10);
     gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), 10);
-    gtk_container_add(GTK_CONTAINER(scrolled_window), flowbox);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window),
+                                  flowbox);
 
     g_signal_connect(flowbox, "selected-children-changed",
                      G_CALLBACK(image_selected), app);
 
     if (wallpapers) {
         for (int i = 0; i < number_of_images; i++) {
-            GtkWidget *image = gtk_image_new();
+            GtkWidget *image = gtk_image_new_from_file(wallpapers[i].path);
             gtk_flow_box_insert(GTK_FLOW_BOX(flowbox), image, -1);
-
-            show_image(image, wallpapers[i].path, image_width);
-
+            gtk_widget_set_visible(image, true);
             g_object_set_data(G_OBJECT(image), "wallpaper",
                               (gpointer)&wallpapers[i]);
         }
@@ -264,20 +235,20 @@ static void show_images(GtkButton *button, GtkApplication *app) {
 
     gtk_flow_box_set_sort_func(GTK_FLOW_BOX(flowbox), sort_flow_images, NULL,
                                NULL);
-    gtk_widget_show_all(scrolled_window);
+    gtk_widget_set_visible(scrolled_window, true);
+    gtk_widget_set_visible(flowbox, true);
 }
 
 static void wm_show_monitors(GtkButton *button, gpointer user_data) {
     (void)button;
     GtkApplication *app = GTK_APPLICATION(user_data);
-    GtkContainer *monitors_box =
-        g_object_get_data(G_OBJECT(app), "monitors_box");
+    GtkBox *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
     if (monitors_box == NULL) return;
 
     int number_of_monitors;
     Monitor *monitors = wm_list_monitors(&number_of_monitors);
 
-    destroy_all_widgets(monitors_box);
+    /* destroy_all_widgets(monitors_box); */
 
     g_object_set_data(G_OBJECT(app), "menu_choice", (gpointer)button);
 
@@ -290,26 +261,25 @@ static void wm_show_monitors(GtkButton *button, gpointer user_data) {
         g_object_set_data(G_OBJECT(button), "monitor", (gpointer)monitor);
         g_signal_connect(button, "clicked", G_CALLBACK(show_images),
                          (gpointer)app);
-        gtk_box_pack_start(GTK_BOX(monitors_box), button, false, false, 10);
+        gtk_box_append(GTK_BOX(monitors_box), button);
     }
 
     g_object_set_data_full(G_OBJECT(app), "monitors", (gpointer)monitors,
                            free_monitors);
-    gtk_widget_show_all(GTK_WIDGET(monitors_box));
+    gtk_widget_set_visible(GTK_WIDGET(monitors_box), true);
 }
 
 static void dm_show_monitors(GtkButton *button, gpointer user_data) {
     (void)button;
     GtkApplication *app = GTK_APPLICATION(user_data);
-    GtkContainer *monitors_box =
-        g_object_get_data(G_OBJECT(app), "monitors_box");
+    GtkBox *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
     Monitor *primary_monitor, *secondary_monitor;
     int number_of_other_monitors;
 
     primary_monitor = malloc(sizeof(Monitor));
     secondary_monitor = malloc(sizeof(Monitor));
 
-    destroy_all_widgets(monitors_box);
+    /* destroy_all_widgets(monitors_box); */
 
     g_object_set_data(G_OBJECT(app), "menu_choice", (gpointer)button);
 
@@ -326,8 +296,7 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
     g_signal_connect(button_primary_monitor, "clicked", G_CALLBACK(show_images),
                      (gpointer)app);
 
-    gtk_box_pack_start(GTK_BOX(monitors_box), button_primary_monitor, false,
-                       false, 10);
+    gtk_box_append(GTK_BOX(monitors_box), button_primary_monitor);
 
     if (number_of_other_monitors == 1) {
         GtkWidget *button_secondary_monitor =
@@ -341,8 +310,7 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
         g_signal_connect(button_secondary_monitor, "clicked",
                          G_CALLBACK(show_images), (gpointer)app);
 
-        gtk_box_pack_start(GTK_BOX(monitors_box), button_secondary_monitor,
-                           false, false, 10);
+        gtk_box_append(GTK_BOX(monitors_box), button_secondary_monitor);
     } else if (number_of_other_monitors > 1) {
         GtkWidget *button_other_monitors = gtk_button_new_with_label(
             g_strdup_printf("Other monitors (%d)", number_of_other_monitors));
@@ -353,13 +321,12 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
         g_signal_connect(button_other_monitors, "clicked",
                          G_CALLBACK(show_images), (gpointer)app);
 
-        gtk_box_pack_start(GTK_BOX(monitors_box), button_other_monitors, false,
-                           false, 10);
+        gtk_box_append(GTK_BOX(monitors_box), button_other_monitors);
     } else {
         free(secondary_monitor);
     }
 
-    gtk_widget_show_all(GTK_WIDGET(monitors_box));
+    gtk_widget_set_visible(GTK_WIDGET(monitors_box), true);
 }
 
 static void activate(GtkApplication *app, gpointer user_data) {
@@ -373,10 +340,10 @@ static void activate(GtkApplication *app, gpointer user_data) {
 
     GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     g_object_set_data(G_OBJECT(app), "vbox", vbox);
-    gtk_container_add(GTK_CONTAINER(window), vbox);
+    gtk_window_set_child(GTK_WINDOW(window), vbox);
 
     GtkWidget *menu_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-    gtk_container_add(GTK_CONTAINER(vbox), menu_box);
+    gtk_box_append(GTK_BOX(vbox), menu_box);
 
     GtkWidget *button_wm_list_monitors =
         gtk_button_new_with_label("Desktop background");
@@ -384,8 +351,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
                       "wm_background");
     g_signal_connect(button_wm_list_monitors, "clicked",
                      G_CALLBACK(wm_show_monitors), (gpointer)app);
-    gtk_box_pack_start(GTK_BOX(menu_box), button_wm_list_monitors, false, false,
-                       10);
+    gtk_box_append(GTK_BOX(menu_box), button_wm_list_monitors);
     wm_show_monitors(GTK_BUTTON(button_wm_list_monitors), (gpointer)app);
 
     GtkWidget *button_dm_list_monitors =
@@ -394,19 +360,19 @@ static void activate(GtkApplication *app, gpointer user_data) {
                      G_CALLBACK(dm_show_monitors), (gpointer)app);
     g_object_set_data(G_OBJECT(button_wm_list_monitors), "name",
                       "dm_background");
-    gtk_box_pack_start(GTK_BOX(menu_box), button_dm_list_monitors, false, false,
-                       10);
+    gtk_box_append(GTK_BOX(menu_box), button_dm_list_monitors);
 
     GtkWidget *monitors_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-    gtk_container_add(GTK_CONTAINER(vbox), monitors_box);
+    gtk_box_append(GTK_BOX(vbox), monitors_box);
     g_object_set_data(G_OBJECT(app), "monitors_box", monitors_box);
 
     GtkWidget *status_selected_monitor = gtk_label_new("");
     gtk_label_set_selectable(GTK_LABEL(status_selected_monitor), false);
-    gtk_container_add(GTK_CONTAINER(menu_box), status_selected_monitor);
-    g_object_set_data(G_OBJECT(app), "status_selected_monitor", status_selected_monitor);
+    gtk_box_append(GTK_BOX(menu_box), status_selected_monitor);
+    g_object_set_data(G_OBJECT(app), "status_selected_monitor",
+                      status_selected_monitor);
 
-    gtk_widget_show_all(window);
+    gtk_widget_set_visible(window, true);
 }
 
 extern int initialize_application(int argc, char **argv, int *socket) {

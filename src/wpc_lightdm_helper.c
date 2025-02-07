@@ -1,50 +1,57 @@
-#include "lightdm_common.h"
+#include "common.h"
 
-#include <gtk/gtk.h>
+#include <assert.h>
+#include <dirent.h>
+#include <errno.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 1024
 
+int mkpath(char *file_path, mode_t mode) {
+    assert(file_path && *file_path);
+    for (char *p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
+        *p = '\0';
+        if (mkdir(file_path, mode) == -1) {
+            if (errno != EEXIST) {
+                *p = '/';
+                return -1;
+            }
+        }
+        *p = '/';
+    }
+    return 0;
+}
 
-
-
-static int set_background(char *scaled_wallpaper_path, Monitor *monitor) {
-    char base_dir[] = "/usr/share/backgrounds/wpc/versions";
-    char *storage_directory =
-        g_strdup_printf("%s/%dx%d", base_dir, monitor->width, monitor->height);
-
-    char *dst_file_path =
-        g_strdup_printf("%s/%s.png", storage_directory, scaled_wallpaper_path);
-
+static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
+                          bool primary_monitor) {
+    char *storage_directory = dirname(dst_wallpaper_path);
     DIR *dir = opendir(storage_directory);
     if (dir) {
         closedir(dir);
     } else if (errno == ENOENT) {
-        if (g_mkdir_with_parents(storage_directory, 0775) != 0) {
-            perror("Failed to create storage directory");
-            fflush(stderr);
-            g_free(dst_file_path);
+        if (mkdir(storage_directory, 0775) != 0) {
+            printf("Failed to create storage directory");
+            fflush(stdout);
             return 1;
         }
     }
 
-    if (rename(scaled_wallpaper_path, dst_file_path) != 0) {
-        perror("Failed to move scaled image to destination");
-        return 1;
-    }
+    rename(scaled_wallpaper_path, dst_wallpaper_path);
 
     char **config = NULL;
     int lines = 0;
+    bool found = false;
     if (parse_config(&config, &lines) == 0) {
         FILE *file = fopen(CONFIG_FILE, "w");
         if (file == NULL) {
-            perror("Error opening configuration file for writing");
-            fflush(stderr);
-            g_free(storage_directory);
-            g_free(dst_file_path);
+            printf("Error opening configuration file for writing");
+            fflush(stdout);
+            free(storage_directory);
             for (int i = 0; i < lines; i++) {
                 free(config[i]);
             }
@@ -59,12 +66,14 @@ static int set_background(char *scaled_wallpaper_path, Monitor *monitor) {
             if (delimiter) {
                 *delimiter = '\0';
                 char *key = line;
-                if (monitor->primary == true &&
+                if (primary_monitor &&
                     strcmp(key, "background") == 0) {
-                    fprintf(file, "%s=%s\n", key, dst_file_path);
-                } else if (!monitor->primary &&
+                    fprintf(file, "%s=%s\n", key, dst_wallpaper_path);
+                    found = true;
+                } else if (! primary_monitor &&
                            strcmp(key, "other-monitors-logo") == 0) {
-                    fprintf(file, "%s=%s\n", key, dst_file_path);
+                    fprintf(file, "%s=%s\n", key, dst_wallpaper_path);
+                    found = true;
                 } else {
                     *delimiter = '=';
                     fprintf(file, "%s\n", line);
@@ -74,6 +83,12 @@ static int set_background(char *scaled_wallpaper_path, Monitor *monitor) {
             }
             free(config[i]);
         }
+
+        if (!found) {
+            char *key = primary_monitor ? "background" : "other-monitors-logo";
+            fprintf(file, "%s=%s\n", key, dst_wallpaper_path);
+        }
+
         free(config);
         fflush(file);
 
@@ -81,6 +96,7 @@ static int set_background(char *scaled_wallpaper_path, Monitor *monitor) {
 
         printf("successfully edited background for LightDM");
     }
+    fflush(stdout);
     return 0;
 }
 
@@ -89,16 +105,29 @@ extern int main(int argc, char **argv) {
     char buffer[BUFFER_SIZE];
     ssize_t count;
 
+    char *tmp_wallpaper_path;
+    char *dst_wallpaper_path;
+    bool monitor_primary;
+
+    int status = 1;
+
     count = read(STDIN_FILENO, buffer, sizeof(buffer) - 1);
     if (count > 0) {
         buffer[count] = '\0';
 
+        char *delimiter;
+        delimiter = strchr(buffer, ' ');
 
+        *delimiter = '\0';
 
-        printf("%s %s %s", lightdm_config_file, monitor_name, wallpaper_path);
-        Monitor *monitor = get_monitor(monitor_name);
+        tmp_wallpaper_path = strdup(buffer);
+        dst_wallpaper_path = strdup(delimiter + 1);
+        delimiter = strchr(dst_wallpaper_path, ' ');
+        *delimiter = '\0';
+        monitor_primary = strcmp(delimiter + 1, "true") == 0 ? true : false;
 
-        set_background(wallpaper_path, monitor);
+        status = set_background(tmp_wallpaper_path, dst_wallpaper_path,
+                                monitor_primary);
     }
-    return 0;
+    return status;
 }

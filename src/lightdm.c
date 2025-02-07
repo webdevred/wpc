@@ -5,12 +5,11 @@
 #include <gtk/gtk.h>
 #include <wand/MagickWand.h>
 
-#include "wpc.h"
-#include "lightdm_common.h"
 #include "lightdm.h"
+#include "common.h"
 #include "monitors.h"
 #include "resolution_scaling.h"
-
+#include "wpc.h"
 
 extern void lightdm_get_backgrounds(char **primary_monitor,
                                     char **other_monitor) {
@@ -75,7 +74,8 @@ static void format_dst_filename(gchar **dst_filename) {
     }
 }
 
-static int scale_image(Wallpaper *src_image, char *dst_image_path, Monitor *monitor) {
+static int scale_image(Wallpaper *src_image, char *dst_image_path,
+                       Monitor *monitor) {
 #define ThrowWandException(wand)                                               \
     {                                                                          \
         char *description;                                                     \
@@ -119,49 +119,74 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path, Monitor *moni
     return (0);
 }
 
+char *serialize_args(const char *tmp_wallpaper_path,
+                     const char *dst_wallpaper_path, const bool primary_monitor,
+                     size_t *out_size) {
+    char *primary_monitor_str = primary_monitor == true ? "true" : "false";
+
+    size_t tmp_path_len = strlen(tmp_wallpaper_path) + 1;
+    size_t dst_path_len = strlen(dst_wallpaper_path) + 1;
+    size_t primary_monitor_len = strlen(primary_monitor_str) + 1;
+    *out_size = tmp_path_len + dst_path_len + primary_monitor_len;
+    char *output = malloc(*out_size);
+
+    memcpy(output, tmp_wallpaper_path, tmp_path_len);
+    memcpy(output + tmp_path_len, dst_wallpaper_path, dst_path_len);
+    memcpy(output + tmp_path_len + dst_path_len, primary_monitor_str,
+           primary_monitor_len);
+}
+
 extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
-    gchar *new_filename = g_path_get_basename(wallpaper->path);
+    char base_dir[] = "/usr/share/backgrounds/wpc/versions";
+    char *storage_directory =
+        g_strdup_printf("%s/%dx%d", base_dir, monitor->width, monitor->height);
+    char *new_filename = g_path_get_basename(wallpaper->path);
+
     format_dst_filename(&new_filename);
-    gchar *tmp_file_path =
+
+    char *tmp_file_path =
         g_strdup_printf("%s/.wpc_%s.png", g_get_home_dir(), new_filename);
+
+    char *dst_file_path =
+        g_strdup_printf("%s/%s.png", storage_directory, new_filename);
+
     if (scale_image(wallpaper, tmp_file_path, monitor) != 0) {
         fflush(stderr);
         g_free(tmp_file_path);
         logprintf(ERROR, "Failed to scale image");
     }
 
-    gchar *args = serialize_args(monitor->name, wallpaper->path);
-
-    gchar *argv[] = {"/usr/local/libexec/wpc_helper", NULL};
+    gchar *argv[] = {"/usr/local/libexec/wpc/lightdm_helper", NULL};
     GError *error = NULL;
     GPid child_pid;
     gint in_fd, out_fd, err_fd;
+    err_fd = fileno(stderr);
 
     if (!g_spawn_async_with_pipes(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD,
                                   NULL, NULL, &child_pid, &in_fd, &out_fd,
                                   &err_fd, &error)) {
         g_print("Failed to spawn helper: %s\n", error->message);
         g_error_free(error);
-        free(args);
         return;
     }
 
+    char *serialized_monitor_primary =
+        monitor->primary == true ? "true" : false;
+    char *args = g_strdup_printf("%s %s %s", tmp_file_path, dst_file_path,
+                                 serialized_monitor_primary);
     write(in_fd, args, strlen(args));
-
-    free(args);
 
     char buffer[256];
     ssize_t count = read(out_fd, buffer, sizeof(buffer) - 1);
     if (count > 0) {
         buffer[count] = '\0';
-        g_print("Response from helper: %s\n", buffer);
+        logprintf(INFO, g_strdup_printf("Response from helper: %s", buffer));
     } else {
-        g_print("No response from helper.\n");
+        logprintf(ERROR, "No response from helper.\n");
     }
 
     close(in_fd);
     close(out_fd);
-    close(err_fd);
 
     g_spawn_close_pid(child_pid);
 }

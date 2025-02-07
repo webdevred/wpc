@@ -37,7 +37,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 
     Wallpaper *wallpaper = get_flow_child_wallpaper(selected_children);
 
-    logprintf(INFO, g_strdup_printf("Clicked image %s Selected monitor: %dx%d\n", wallpaper->path,
+    logprintf(INFO, g_strdup_printf("Clicked image %s Selected monitor: %dx%d", wallpaper->path,
                               monitor->width, monitor->height));
 
     GtkButton *button_menu_choice =

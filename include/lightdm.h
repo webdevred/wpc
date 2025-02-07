@@ -1,6 +1,5 @@
 #pragma once
 #include "monitors.h"
-#include <glib.h>
 
 extern int parse_config(char ***config_ptr, int *lines_ptr);
 

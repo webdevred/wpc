@@ -35,10 +35,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
-
 #include <Imlib2.h>
+
+#include "wpc.h"
+#include "common.h"
 #include "gib_imlib.h"
-#include "logging.h"
 #include "config.h"
 #include "filesystem.h"
 #include "wallpaper.h"

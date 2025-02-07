@@ -20,7 +20,7 @@ static char *get_time() {
 
 extern void logprintf(LogLevel level, char *message) {
   char *time = get_time();
-  FILE *device = level > INFO ? stdout : stderr;
+  FILE *device = level > INFO ? stderr : stdout;
   fprintf(device,LOGGING_FORMAT, time, "INFO", message);
   free(time);
   if (level > WARN) {

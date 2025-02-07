@@ -1,6 +1,6 @@
 bc_files
 build
-wpc_helper
+wpc_lightdm_helper
 wpc
 .ccls-cache
 **/*~

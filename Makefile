@@ -1,83 +1,56 @@
 SHELL := /bin/bash
+CC := gcc
 
-CC = gcc
+COMMON_CFLAGS := -Wall -Wextra -std=c23 -g3
+WPC_CFLAGS := $(COMMON_CFLAGS) $(shell pkg-config --cflags gtk4 glib-2.0 MagickWand libcjson)
+WPC_LDFLAGS := $(shell pkg-config --libs gtk4 glib-2.0 x11 xrandr MagickWand imlib2 libcjson)
 
-CFLAGS = -Wall -Wextra -std=c23 -g3 \
-         $(shell pkg-config --cflags gtk4) \
-         $(shell pkg-config --cflags glib-2.0) \
-         $(shell pkg-config --cflags MagickWand) \
-         $(shell pkg-config --cflags libcjson) \
-         -D_POSIX_C_SOURCE=200809L
+HELPER_CFLAGS := $(COMMON_CFLAGS)
+HELPER_LDFLAGS :=
 
-LDFLAGS = $(shell pkg-config --libs gtk4) \
-          $(shell pkg-config --libs glib-2.0) \
-          $(shell pkg-config --libs x11) \
-          $(shell pkg-config --libs xrandr) \
-          $(shell pkg-config --libs MagickWand) \
-          $(shell pkg-config --libs imlib2) \
-          $(shell pkg-config --libs libcjson)
+SRC_DIR := src
+BUILD_DIR := build
+INCLUDE_DIR := include
+BC_DIR := bc_files
 
-WPC_INSTALL_DIR = /usr/local/bin
-WPC_HELPER_INSTALL_DIR = /usr/local/libexec/wpc
+WPC_INSTALL_DIR := /usr/local/bin
+WPC_HELPER_INSTALL_DIR := /usr/local/libexec/wpc
 
-SRC_DIR = src
-BUILD_DIR = build
-INCLUDE_DIR = include
-BC_DIR = bc_files
+WPC_SRCS := $(filter-out $(SRC_DIR)/wpc_lightdm_helper.c, $(wildcard $(SRC_DIR)/*.c))
+HELPER_SRCS := $(SRC_DIR)/wpc_lightdm_helper.c $(SRC_DIR)/common.c
 
-WPC_SRCS = $(filter-out $(SRC_DIR)/wpc_lightdm_helper.c, $(wildcard $(SRC_DIR)/*.c))
-HELPER_SRCS = $(SRC_DIR)/wpc_lightdm_helper.c $(SRC_DIR)/lightdm_common.c $(SRC_DIR)/imagemagick.c
+WPC_OBJS := $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(WPC_SRCS))
+HELPER_OBJS := $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(HELPER_SRCS))
 
-WPC_OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(WPC_SRCS))
-HELPER_OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(HELPER_SRCS))
-
-TARGETS = wpc wpc_lightdm_helper
+TARGETS := wpc wpc_lightdm_helper
 
 .PHONY: all clean install bc ccls
+
+.SILENT: ccls
 
 all: $(TARGETS)
 
 wpc: $(WPC_OBJS)
-	$(CC) $(WPC_OBJS) $(LDFLAGS) -o $@
+	$(CC) $(WPC_OBJS) $(WPC_LDFLAGS) -o $@
 
 wpc_lightdm_helper: $(HELPER_OBJS)
-	$(CC) $(HELPER_OBJS) $(LDFLAGS) -o $@
+	$(CC) $(HELPER_OBJS) $(HELPER_LDFLAGS) -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -c $< -o $@
+	$(CC) $(if $(filter $(HELPER_SRCS), $<),$(HELPER_CFLAGS),$(WPC_CFLAGS)) \
+        -I$(INCLUDE_DIR) -MMD -MP -c $< -o $@
 
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+$(BUILD_DIR) $(BC_DIR) $(WPC_INSTALL_DIR) $(WPC_HELPER_INSTALL_DIR):
+	mkdir -p $@
 
-wpc_install_dir:
-	mkdir -p $(WPC_INSTALL_DIR)
-
-lightdm_helper_install_dir:
-	mkdir -p $(WPC_HELPER_INSTALL_DIR)
-	chmod +x $(WPC_HELPER_INSTALL_DIR)
-
-install: wpc_install_dir lightdm_helper_install_dir
-	mv wpc $(WPC_INSTALL_DIR)/wpc
-	chmod 0111 $(WPC_INSTALL_DIR)/wpc
-	mv wpc_lightdm_helper $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
-	chown "root:root" $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
-	chmod 0001 $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
-	chmod u+s $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
+install: all | $(WPC_INSTALL_DIR) $(WPC_HELPER_INSTALL_DIR)
+	install -m 0111 wpc $(WPC_INSTALL_DIR)/
+	install -o root -g root -m 4711 wpc_lightdm_helper $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGETS)
-
-BC_FILES := $(patsubst $(SRC_DIR)/%.c, $(BC_DIR)/%.bc, $(wildcard $(SRC_DIR)/*.c))
-
-$(BC_DIR):
-	mkdir -p $(BC_DIR)
-
-$(BC_DIR)/%.bc: $(SRC_DIR)/%.c | $(BC_DIR)
-	$(CC) -I $(INCLUDE_DIR) $(CFLAGS) -c -emit-llvm -o $@ $<
-
-bc: $(BC_FILES)
+	rm -rf $(BUILD_DIR) $(BC_DIR) $(TARGETS)
 
 ccls:
 	echo clang > .ccls
-	echo -n -Iinclude >> .ccls
-	echo -n "$(CFLAGS) $(LDFLAGS)" | sed 's/ /\n/g' | sort | uniq >> .ccls
+	echo -n -I$(INCLUDE_DIR) >> .ccls
+	echo -n "$(COMMON_CFLAGS) $(WPC_LDFLAGS) $(HELPER_LDFLAGS)" | tr ' ' '\n' | sort -u >> .ccls

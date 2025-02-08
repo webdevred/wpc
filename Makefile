@@ -53,4 +53,4 @@ clean:
 ccls:
 	echo clang > .ccls
 	echo -n -I$(INCLUDE_DIR) >> .ccls
-	echo -n "$(COMMON_CFLAGS) $(WPC_LDFLAGS) $(HELPER_LDFLAGS)" | tr ' ' '\n' | sort -u >> .ccls
+	echo -n "$(WPC_CFLAGS) $(HELPER_CFLAGS) $(WPC_LDFLAGS) $(HELPER_LDFLAGS)" | tr ' ' '\n' | sort -u >> .ccls

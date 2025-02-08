@@ -9,12 +9,12 @@
 
 #include "filesystem.h"
 #include "gui.h"
+#include "imagemagick.h"
 #include "lightdm.h"
 #include "monitors.h"
 #include "resolution_scaling.h"
-#include "wallpaper.h"
-#include "imagemagick.h"
 #include "strings.h"
+#include "wallpaper.h"
 
 extern void g_free_config(gpointer data) {
     Config *config = (Config *)data;
@@ -37,8 +37,9 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 
     Wallpaper *wallpaper = get_flow_child_wallpaper(selected_children);
 
-    logprintf(INFO, g_strdup_printf("Clicked image %s Selected monitor: %dx%d", wallpaper->path,
-                              monitor->width, monitor->height));
+    logprintf(INFO, g_strdup_printf("Clicked image %s Selected monitor: %dx%d",
+                                    wallpaper->path, monitor->width,
+                                    monitor->height));
 
     GtkButton *button_menu_choice =
         g_object_get_data(G_OBJECT(app), "menu_choice");
@@ -47,7 +48,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
 
     if (g_strcmp0(menu_choice, "dm_background") == 0) {
-      lightdm_set_background(wallpaper,monitor);
+        lightdm_set_background(wallpaper, monitor);
     } else {
         Config *config = g_object_get_data(G_OBJECT(app), "configuration");
         char *monitor_name = monitor->name;
@@ -62,7 +63,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 
         bool found = false;
 
-        logprintf(INFO,"trying to update monitor in existing configuration");
+        logprintf(INFO, "trying to update monitor in existing configuration");
         for (int i = 0; i < number_of_monitors; i++) {
             if (monitors[i].name &&
                 strcmp(monitors[i].name, monitor_name) == 0) {

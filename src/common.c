@@ -1,11 +1,11 @@
 #include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "wpc.h"
 #include "common.h"
+#include "wpc.h"
 
 extern int parse_config(char ***config_ptr, int *lines_ptr) {
     FILE *file = fopen(CONFIG_FILE, "r");

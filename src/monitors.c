@@ -24,13 +24,14 @@ extern void init_disp(Display **disp, Window *root) {
     *root = DefaultRootWindow(*disp);
 }
 
-extern void get_screen_resources(Display **disp, Window *root, XRRScreenResources **screen_resources) {
-  *screen_resources = XRRGetScreenResources(*disp, *root);
-  if (*screen_resources == NULL) {
-    fprintf(stderr, "Unable to get screen resources\n");
-    XCloseDisplay(*disp);
-    exit(1);
-  }
+extern void get_screen_resources(Display **disp, Window *root,
+                                 XRRScreenResources **screen_resources) {
+    *screen_resources = XRRGetScreenResources(*disp, *root);
+    if (*screen_resources == NULL) {
+        fprintf(stderr, "Unable to get screen resources\n");
+        XCloseDisplay(*disp);
+        exit(1);
+    }
 }
 
 extern Monitor *wm_list_monitors(int *number_of_monitors) {

@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "wpc.h"
 #include "filesystem.h"
 #include "imagemagick.h"
+#include "wpc.h"
 
 extern Wallpaper *list_wallpapers(gchar *source_directory,
                                   int *number_of_images) {
@@ -55,7 +55,6 @@ extern Wallpaper *list_wallpapers(gchar *source_directory,
 
     return wallpaper_array;
 }
-
 
 extern Wallpaper get_wallpaper(gchar *wallpaper_path) {
     Wallpaper wallpaper;

@@ -28,21 +28,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/stat.h>
 
 #include "monitors.h"
-#include <X11/Xlib.h>
+#include <Imlib2.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
-#include <Imlib2.h>
 
-#include "wpc.h"
 #include "common.h"
-#include "gib_imlib.h"
 #include "config.h"
 #include "filesystem.h"
+#include "gib_imlib.h"
 #include "wallpaper.h"
+#include "wpc.h"
 
 Window ipc_win = None;
 Window my_ipc_win = None;
@@ -80,7 +79,6 @@ void init_x_and_imlib(void) {
 
     return;
 }
-
 
 static void feh_wm_set_bg_scaled(Pixmap pmap, Imlib_Image im, int x, int y,
                                  int w, int h) {
@@ -243,9 +241,11 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
             char *wallpaper_path = monitors->image_path;
             im = imlib_load_image(wallpaper_path);
 
-            logprintf(INFO, g_strdup_printf("set filled bg: %s %s %d %d %d %d", monitor->name,
-                   wallpaper_path, monitor->width, monitor->height,
-                                    monitor->horizontal_position, monitor->vertical_position));
+            logprintf(INFO, g_strdup_printf("set filled bg: %s %s %d %d %d %d",
+                                            monitor->name, wallpaper_path,
+                                            monitor->width, monitor->height,
+                                            monitor->horizontal_position,
+                                            monitor->vertical_position));
 
             feh_wm_set_bg_filled(pmap_d1, im, monitor->horizontal_position,
                                  monitor->vertical_position, monitor->width,
@@ -302,7 +302,7 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
     prop_esetroot = XInternAtom(disp2, "ESETROOT_PMAP_ID", False);
 
     if (prop_root == None || prop_esetroot == None)
-      logprintf(ERROR, "creation of pixmap property failed.");
+        logprintf(ERROR, "creation of pixmap property failed.");
 
     XChangeProperty(disp2, root2, prop_root, XA_PIXMAP, 32, PropModeReplace,
                     (unsigned char *)&pmap_d2, 1);

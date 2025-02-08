@@ -5,41 +5,16 @@
 #include <gtk/gtk.h>
 #include <wand/MagickWand.h>
 
-#include "lightdm.h"
+#include <signal.h>
+#include <stdio.h>
+#include <sys/prctl.h>
+#include <unistd.h>
+
 #include "common.h"
+#include "lightdm.h"
 #include "monitors.h"
 #include "resolution_scaling.h"
 #include "wpc.h"
-
-extern void lightdm_get_backgrounds(char **primary_monitor,
-                                    char **other_monitor) {
-    char **config = NULL;
-    int lines = 0;
-
-    if (parse_config(&config, &lines) != 0) {
-        fprintf(stderr, "Failed to parse config file.\n");
-        return;
-    }
-
-    for (int i = 0; i < lines; i++) {
-        char *line = config[i];
-        char *delimiter = strchr(line, '=');
-
-        if (delimiter) {
-            *delimiter = '\0';
-            char *key = line;
-            char *value = delimiter + 1;
-
-            if (strcmp(key, "background") == 0) {
-                *primary_monitor = strdup(value);
-            } else if (strcmp(key, "other-monitors-logo") == 0) {
-                *other_monitor = strdup(value);
-            }
-        }
-        free(config[i]);
-    }
-    free(config);
-}
 
 static void format_dst_filename(gchar **dst_filename) {
     gchar *str = *dst_filename;
@@ -119,21 +94,79 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path,
     return (0);
 }
 
-char *serialize_args(const char *tmp_wallpaper_path,
-                     const char *dst_wallpaper_path, const bool primary_monitor,
-                     size_t *out_size) {
-    char *primary_monitor_str = primary_monitor == true ? "true" : "false";
+static void setup_child_auto_exit() { prctl(PR_SET_PDEATHSIG, SIGTERM); }
 
-    size_t tmp_path_len = strlen(tmp_wallpaper_path) + 1;
-    size_t dst_path_len = strlen(dst_wallpaper_path) + 1;
-    size_t primary_monitor_len = strlen(primary_monitor_str) + 1;
-    *out_size = tmp_path_len + dst_path_len + primary_monitor_len;
-    char *output = malloc(*out_size);
+static gboolean stdout_callback(GIOChannel *source, GIOCondition condition,
+                                gpointer user_data) {
+    (void)user_data, (void)condition;
+    gchar *line = NULL;
+    GError *error = NULL;
+    if (g_io_channel_read_line(source, &line, NULL, NULL, &error) ==
+            G_IO_STATUS_NORMAL &&
+        line) {
+        logprintf(INFO, line);
+        g_free(line);
+        return TRUE;
+    }
+    return FALSE;
+}
 
-    memcpy(output, tmp_wallpaper_path, tmp_path_len);
-    memcpy(output + tmp_path_len, dst_wallpaper_path, dst_path_len);
-    memcpy(output + tmp_path_len + dst_path_len, primary_monitor_str,
-           primary_monitor_len);
+static gboolean stderr_callback(GIOChannel *source, GIOCondition condition,
+                                gpointer user_data) {
+    (void)user_data, (void)condition;
+    gchar buffer[1024];
+    gsize bytes_read = 0;
+    GError *error = NULL;
+    if (g_io_channel_read_chars(source, buffer, sizeof(buffer) - 1, &bytes_read,
+                                &error) == G_IO_STATUS_NORMAL &&
+        bytes_read > 0) {
+        buffer[bytes_read] = '\0';
+        fprintf(stderr, "stderr: %s", buffer);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+static void child_exit_callback(GPid pid, gint status, gpointer user_data) {
+    printf("Child process exited with status %d\n", status);
+    g_spawn_close_pid(pid);
+    GMainLoop *loop = (GMainLoop *)user_data;
+    g_main_loop_quit(loop);
+}
+
+static void spawn_process_and_handle_io(char **argv, const char *payload) {
+    gint in_fd, out_fd, err_fd;
+    GPid child_pid;
+    GError *error = NULL;
+
+    if (!g_spawn_async_with_pipes(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD,
+                                  (GSpawnChildSetupFunc)setup_child_auto_exit,
+                                  NULL, &child_pid, &in_fd, &out_fd, &err_fd,
+                                  &error)) {
+        fprintf(stderr, "Failed to spawn process: %s\n", error->message);
+        g_error_free(error);
+        return;
+    }
+
+    write(in_fd, payload, strlen(payload));
+    close(in_fd);
+
+    GIOChannel *out_channel = g_io_channel_unix_new(out_fd);
+    GIOChannel *err_channel = g_io_channel_unix_new(err_fd);
+
+    g_io_channel_set_encoding(out_channel, NULL, NULL);
+    g_io_channel_set_encoding(err_channel, NULL, NULL);
+
+    g_io_add_watch(out_channel, G_IO_IN | G_IO_HUP, stdout_callback, NULL);
+    g_io_add_watch(err_channel, G_IO_IN | G_IO_HUP, stderr_callback, NULL);
+
+    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+    g_child_watch_add(child_pid, child_exit_callback, loop);
+    g_main_loop_run(loop);
+    g_main_loop_unref(loop);
+
+    g_io_channel_unref(out_channel);
+    g_io_channel_unref(err_channel);
 }
 
 extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
@@ -146,7 +179,6 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
 
     char *tmp_file_path =
         g_strdup_printf("%s/.wpc_%s.png", g_get_home_dir(), new_filename);
-
     char *dst_file_path =
         g_strdup_printf("%s/%s.png", storage_directory, new_filename);
 
@@ -157,36 +189,45 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
     }
 
     gchar *argv[] = {"/usr/local/libexec/wpc/lightdm_helper", NULL};
-    GError *error = NULL;
-    GPid child_pid;
-    gint in_fd, out_fd, err_fd;
-    err_fd = fileno(stderr);
 
-    if (!g_spawn_async_with_pipes(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD,
-                                  NULL, NULL, &child_pid, &in_fd, &out_fd,
-                                  &err_fd, &error)) {
-        g_print("Failed to spawn helper: %s\n", error->message);
-        g_error_free(error);
+    char *serialized_monitor_primary = monitor->primary ? "true" : "false";
+    char *payload = g_strdup_printf("%s %s %s", tmp_file_path, dst_file_path,
+                                    serialized_monitor_primary);
+
+    spawn_process_and_handle_io(argv, payload);
+
+    g_free(storage_directory);
+    g_free(tmp_file_path);
+    g_free(dst_file_path);
+    g_free(payload);
+}
+
+extern void lightdm_get_backgrounds(char **primary_monitor,
+                                    char **other_monitor) {
+    char **config = NULL;
+    int lines = 0;
+
+    if (parse_config(&config, &lines) != 0) {
+        fprintf(stderr, "Failed to parse config file.\n");
         return;
     }
 
-    char *serialized_monitor_primary =
-        monitor->primary == true ? "true" : false;
-    char *args = g_strdup_printf("%s %s %s", tmp_file_path, dst_file_path,
-                                 serialized_monitor_primary);
-    write(in_fd, args, strlen(args));
+    for (int i = 0; i < lines; i++) {
+        char *line = config[i];
+        char *delimiter = strchr(line, '=');
 
-    char buffer[256];
-    ssize_t count = read(out_fd, buffer, sizeof(buffer) - 1);
-    if (count > 0) {
-        buffer[count] = '\0';
-        logprintf(INFO, g_strdup_printf("Response from helper: %s", buffer));
-    } else {
-        logprintf(ERROR, "No response from helper.\n");
+        if (delimiter) {
+            *delimiter = '\0';
+            char *key = line;
+            char *value = delimiter + 1;
+
+            if (strcmp(key, "background") == 0) {
+                *primary_monitor = strdup(value);
+            } else if (strcmp(key, "other-monitors-logo") == 0) {
+                *other_monitor = strdup(value);
+            }
+        }
+        free(config[i]);
     }
-
-    close(in_fd);
-    close(out_fd);
-
-    g_spawn_close_pid(child_pid);
+    free(config);
 }

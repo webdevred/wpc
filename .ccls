@@ -2,7 +2,6 @@ clang
 -Iinclude
 -DMAGICKCORE_HDRI_ENABLE=0
 -DMAGICKCORE_QUANTUM_DEPTH=16
--D_POSIX_C_SOURCE=200809L
 -fopenmp
 -g3
 -I/usr/include/blkid

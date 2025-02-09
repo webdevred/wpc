@@ -31,35 +31,35 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <dmalloc.h>
 #define emalloc(a) malloc(a)
 #define estrdup(a) strdup(a)
-#define erealloc(a,b) realloc(a,b)
+#define erealloc(a, b) realloc(a, b)
 #else
 #define emalloc(a) _emalloc(a)
 #define estrdup(a) _estrdup(a)
-#define erealloc(a,b) _erealloc(a,b)
+#define erealloc(a, b) _erealloc(a, b)
 #endif
 
 #ifdef DEBUG
 #ifdef __GNUC__
-#define D(a) \
-{ \
-	if (opt.debug) { \
-		printf("%-12s +%-4u %-20s : ",__FILE__,__LINE__,__FUNCTION__); \
-		printf a; \
-		fflush(stdout); \
-	} \
-  }
-#else					/* __GNUC__ */
-#define D(a) \
-{ \
-	if (opt.debug) { \
-		printf("%-12s +%-4u : ",__FILE__,__LINE__); \
-		printf a; \
-		fflush(stdout); \
-	} \
-}
-#endif					/* __GNUC__ */
-#else					/* DEBUG */
+#define D(a)                                                                   \
+    {                                                                          \
+        if (opt.debug) {                                                       \
+            printf("%-12s +%-4u %-20s : ", __FILE__, __LINE__, __FUNCTION__);  \
+            printf a;                                                          \
+            fflush(stdout);                                                    \
+        }                                                                      \
+    }
+#else /* __GNUC__ */
+#define D(a)                                                                   \
+    {                                                                          \
+        if (opt.debug) {                                                       \
+            printf("%-12s +%-4u : ", __FILE__, __LINE__);                      \
+            printf a;                                                          \
+            fflush(stdout);                                                    \
+        }                                                                      \
+    }
+#endif /* __GNUC__ */
+#else  /* DEBUG */
 #define D(a)
-#endif					/* DEBUG */
+#endif /* DEBUG */
 
-#endif					/* DEBUG_H */
+#endif /* DEBUG_H */

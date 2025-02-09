@@ -14,7 +14,7 @@ typedef struct {
     MonitorBackgroundPair *monitors_with_backgrounds;
 } Config;
 
-void free_config(gpointer data);
+void free_config(Config *config);
 
 Config *load_config(void);
 

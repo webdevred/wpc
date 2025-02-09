@@ -26,66 +26,65 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <stdio.h>
-#include <stdarg.h>
 #include <errno.h>
-#include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #ifndef __GNUC__
-# define __attribute__(x)
+#define __attribute__(x)
 #endif
 
-void eprintf(char *fmt, ...) __attribute__ ((noreturn));
+void eprintf(char *fmt, ...) __attribute__((noreturn));
 void weprintf(char *fmt, ...);
 char *_estrdup(char *s);
 void *_emalloc(size_t n);
 char *ereadfile(char *path);
 
+#define ESTRAPPEND(a, b)                                                       \
+    {                                                                          \
+        char *____newstr;                                                      \
+        if (!(a)) {                                                            \
+            a = estrdup(b);                                                    \
+        } else {                                                               \
+            ____newstr = emalloc(strlen(a) + strlen(b) + 1);                   \
+            strcpy(____newstr, (a));                                           \
+            strcat(____newstr, (b));                                           \
+            free(a);                                                           \
+            (a) = ____newstr;                                                  \
+        }                                                                      \
+    }
 
-#define ESTRAPPEND(a,b) \
-  {\
-    char *____newstr;\
-    if (!(a)) {\
-      a = estrdup(b);\
-    } else {\
-      ____newstr = emalloc(strlen(a) + strlen(b) + 1);\
-      strcpy(____newstr, (a));\
-      strcat(____newstr, (b));\
-      free(a);\
-      (a) = ____newstr;\
-    }\
-  }
+#define ESTRAPPEND_CHAR(a, b)                                                  \
+    {                                                                          \
+        char *____newstr;                                                      \
+        int ____len;                                                           \
+        if (!(a)) {                                                            \
+            (a) = emalloc(2);                                                  \
+            (a)[0] = (b);                                                      \
+            (a)[1] = '\0';                                                     \
+        } else {                                                               \
+            ____len = strlen((a));                                             \
+            ____newstr = emalloc(____len + 2);                                 \
+            strcpy(____newstr, (a));                                           \
+            ____newstr[____len] = (b);                                         \
+            ____newstr[____len + 1] = '\0';                                    \
+            free(a);                                                           \
+            (a) = ____newstr;                                                  \
+        }                                                                      \
+    }
 
-#define ESTRAPPEND_CHAR(a,b) \
-  {\
-    char *____newstr;\
-    int ____len;\
-    if (!(a)) {\
-      (a) = emalloc(2);\
-      (a)[0] = (b);\
-      (a)[1] = '\0';\
-    } else {\
-      ____len = strlen((a));\
-      ____newstr = emalloc(____len + 2);\
-      strcpy(____newstr, (a));\
-      ____newstr[____len] = (b);\
-      ____newstr[____len+1] = '\0';\
-      free(a);\
-      (a) = ____newstr;\
-    }\
-  }
-
-#define ESTRTRUNC(string,chars) \
-  {\
-    int ____len;\
-    if (string) {\
-      ____len = strlen(string);\
-      if (____len >= (chars)) {\
-        (string)[strlen(string) - chars] = '\0';\
-      }\
-    }\
-  }
+#define ESTRTRUNC(string, chars)                                               \
+    {                                                                          \
+        int ____len;                                                           \
+        if (string) {                                                          \
+            ____len = strlen(string);                                          \
+            if (____len >= (chars)) {                                          \
+                (string)[strlen(string) - chars] = '\0';                       \
+            }                                                                  \
+        }                                                                      \
+    }
 
 #endif

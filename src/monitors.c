@@ -39,16 +39,8 @@ extern Monitor *wm_list_monitors(int *number_of_monitors) {
 
     primaryOutput = XRRGetOutputPrimary(display, root);
 
-    *number_of_monitors = screenResources->noutput;
-
-    Monitor *monitors =
-        (Monitor *)malloc(screenResources->noutput * sizeof(Monitor));
-    if (monitors == NULL) {
-        fprintf(stderr, "Failed to allocate memory for monitors\n");
-        XRRFreeScreenResources(screenResources);
-        XCloseDisplay(display);
-        exit(1);
-    }
+    *number_of_monitors = 0;
+    Monitor *monitors = NULL;
 
     for (int i = 0; i < screenResources->noutput; i++) {
         outputInfo = XRRGetOutputInfo(display, screenResources,
@@ -58,9 +50,12 @@ extern Monitor *wm_list_monitors(int *number_of_monitors) {
             crtcInfo =
                 XRRGetCrtcInfo(display, screenResources, outputInfo->crtc);
             if (crtcInfo) {
+                (*number_of_monitors)++;
+                monitors =
+                    realloc(monitors, *number_of_monitors * sizeof(Monitor));
                 monitors[i].name =
                     malloc((strlen(outputInfo->name) + 1) * sizeof(char));
-                monitors[i].name = outputInfo->name;
+                strcpy(monitors[i].name, outputInfo->name);
                 monitors[i].width = crtcInfo->width;
                 monitors[i].height = crtcInfo->height;
                 monitors[i].horizontal_position = crtcInfo->x;
@@ -174,7 +169,7 @@ extern Monitor *get_monitor(char *monitor_name) {
                                       screenResources->outputs[i]);
 
         if (outputInfo->connection == RR_Connected &&
-            strcmp(monitor_name, outputInfo->name)) {
+            strcmp(monitor_name, outputInfo->name) == 0) {
             crtcInfo =
                 XRRGetCrtcInfo(display, screenResources, outputInfo->crtc);
             if (crtcInfo) {
@@ -183,6 +178,8 @@ extern Monitor *get_monitor(char *monitor_name) {
                 strcpy(monitor->name, monitor_name);
                 monitor->width = crtcInfo->width;
                 monitor->height = crtcInfo->height;
+                monitor->horizontal_position = crtcInfo->x;
+                monitor->vertical_position = crtcInfo->y;
                 monitor->primary =
                     (screenResources->outputs[i] == primaryOutput);
 

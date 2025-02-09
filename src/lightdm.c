@@ -1,12 +1,10 @@
 #include "imagemagick.h"
 #include "monitors.h"
+#include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <glib.h>
 #include <gtk/gtk.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #define CONFIG_FILE "/etc/lightdm/slick-greeter.conf"
 #define MAX_LINE_LENGTH 1024
@@ -88,11 +86,46 @@ extern void lightdm_get_backgrounds(char **primary_monitor,
     free(config);
 }
 
+void format_dst_filename(gchar **dst_filename) {
+    gchar *str = *dst_filename;
+    int i = 0, j = 0;
+    int len = strlen(str);
+    int inSpace = 0;
+
+    gchar *extension_dot = strrchr(str, '.');
+    *extension_dot = '\0';
+
+    while (i < len) {
+        if (isspace(str[i]) || str[i] == '-') {
+            if (!inSpace) {
+                str[j++] = ' ';
+                inSpace = 1;
+            }
+        } else if (i > 50) {
+            break;
+        } else {
+            str[j++] = str[i];
+            inSpace = 0;
+        }
+        i++;
+    }
+
+    str[j] = '\0';
+
+    for (int k = 0; k < j; k++) {
+        if (str[k] == ' ') {
+            str[k] = '-';
+        }
+    }
+}
+
 extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
     gchar base_dir[] = "/usr/share/backgrounds/wpc/versions";
     gchar *storage_directory =
         g_strdup_printf("%s/%dx%d", base_dir, monitor->width, monitor->height);
     gchar *dst_filename = g_path_get_basename(wallpaper->path);
+    format_dst_filename(&dst_filename);
+
     gchar *dst_file_path =
         g_strdup_printf("%s/%s.png", storage_directory, dst_filename);
     gchar *tmp_file_path =

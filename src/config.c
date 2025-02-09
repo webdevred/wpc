@@ -12,17 +12,29 @@ static char *get_config_file() {
     return g_strdup_printf("%s/%s", home, CONFIG_FILE);
 }
 
-extern void free_config(gpointer data) {
-    Config *config = (Config *)data;
-    int number_of_monitors = config->number_of_monitors;
-    free(config->source_directory);
-    for (int i = 0; i < number_of_monitors; i++) {
-        MonitorBackgroundPair monitor_background_pair =
-            config->monitors_with_backgrounds[i];
-        free(monitor_background_pair.name);
-        free(monitor_background_pair.image_path);
+static void free_monitor_background_pair(MonitorBackgroundPair *pair) {
+    if (pair) {
+        free(pair->name);
+        pair->name = NULL;
+        free(pair->image_path);
+        pair->image_path = NULL;
     }
-    free(config);
+}
+
+extern void free_config(Config *config) {
+    if (config) {
+        free(config->source_directory);
+
+        if (config->monitors_with_backgrounds) {
+            for (int i = 0; i < config->number_of_monitors; i++) {
+                free_monitor_background_pair(
+                    &config->monitors_with_backgrounds[i]);
+            }
+            free(config->monitors_with_backgrounds);
+        }
+
+        free(config);
+    }
 }
 
 extern Config *load_config() {
@@ -94,15 +106,16 @@ extern Config *load_config() {
     int number_of_monitors = 0;
 
     cJSON_ArrayForEach(monitor_background_json, monitors_json) {
-        config->monitors_with_backgrounds =
+        MonitorBackgroundPair *temp =
             realloc(config->monitors_with_backgrounds,
                     (number_of_monitors + 1) * sizeof(MonitorBackgroundPair));
-
-        if (!config->monitors_with_backgrounds) {
+        if (!temp) {
             perror("Memory reallocation failed");
             cJSON_Delete(settings_json);
+            free_config(config);
             return NULL;
         }
+        config->monitors_with_backgrounds = temp;
 
         MonitorBackgroundPair *monitor_background_pair =
             &config->monitors_with_backgrounds[number_of_monitors];
@@ -128,9 +141,8 @@ extern Config *load_config() {
     return config;
 }
 
-// NOTE: Returns a heap allocated string, you are required to free it after use.
 extern void dump_config(Config *config) {
-    FILE *file = fopen(get_config_file(), "r");
+    FILE *file = fopen(CONFIG_FILE, "w");
     if (file == NULL) {
         perror("Error opening configuration file");
         exit(1);
@@ -151,11 +163,11 @@ extern void dump_config(Config *config) {
         goto end;
     }
 
-    while (config->monitors_with_backgrounds != NULL) {
+    int number_of_monitors = config->number_of_monitors;
+    for (int i = 0; i < number_of_monitors; i++) {
         cJSON *monitor_background_json = cJSON_CreateObject();
-
         MonitorBackgroundPair *monitor_background_pair =
-            config->monitors_with_backgrounds;
+            &config->monitors_with_backgrounds[i];
 
         if (cJSON_AddStringToObject(monitor_background_json, "name",
                                     monitor_background_pair->name) == NULL) {
@@ -179,5 +191,8 @@ extern void dump_config(Config *config) {
 
 end:
     cJSON_Delete(settings);
-    printf("%s", string);
+    fwrite(string, sizeof(char), strlen(string), file);
+    fflush(file);
+    fclose(file);
+    free(string);
 }

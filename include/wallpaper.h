@@ -27,24 +27,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #ifndef WALLPAPER_H
 #define WALLPAPER_H
 
-#include <X11/Xfuncproto.h>
-#include <X11/Intrinsic.h>	/* Xlib, Xutil, Xresource, Xfuncproto */
+#include "config.h"
+#include "feh.h"
+#include "monitors.h"
 
-#define IPC_TIMEOUT    ((char *) 1)
-#define IPC_FAKE       ((char *) 2)	/* Faked IPC */
+#define IPC_TIMEOUT ((char *)1)
+#define IPC_FAKE ((char *)2) /* Faked IPC */
 
-#define enl_ipc_sync()  do {                                           \
-       char *reply = enl_send_and_wait("nop");                         \
-       if ((reply != IPC_FAKE) && (reply != IPC_TIMEOUT))              \
-         free(reply);                                                  \
-   } while (0)
+#define enl_ipc_sync()                                                         \
+    do {                                                                       \
+        char *reply = enl_send_and_wait("nop");                                \
+        if ((reply != IPC_FAKE) && (reply != IPC_TIMEOUT)) free(reply);        \
+    } while (0)
 
 extern Window ipc_win;
 extern Atom ipc_atom;
 
-
-static void feh_wm_set_bg(char *fil, Imlib_Image im, int centered, int scaled,
-		int fill, int desktop, int for_screen);
-extern void feh_wm_set_bg_filelist(unsigned char bgmode);
-
+extern void set_wallpapers(void);
 #endif

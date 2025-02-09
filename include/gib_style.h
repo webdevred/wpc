@@ -23,7 +23,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-
 #ifndef GIB_STYLE_H
 #define GIB_STYLE_H
 
@@ -35,24 +34,22 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 typedef struct __gib_style_bit gib_style_bit;
 typedef struct __gib_style gib_style;
 
-struct __gib_style_bit
-{
-   int x_offset, y_offset;
-   int r,g,b,a;
+struct __gib_style_bit {
+    int x_offset, y_offset;
+    int r, g, b, a;
 };
 
-struct __gib_style
-{
-   gib_list *bits;
-   char *name;
+struct __gib_style {
+    gib_list *bits;
+    char *name;
 };
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
-extern gib_style_bit *gib_style_bit_new(int x_offset, int y_offset, int r, int g, int b, int a);
+extern gib_style_bit *gib_style_bit_new(int x_offset, int y_offset, int r,
+                                        int g, int b, int a);
 extern gib_style *gib_style_new(char *name);
 extern void gib_style_bit_free(gib_style_bit *s);
 /*
@@ -63,6 +60,5 @@ void gib_dup_style_bit(void **dest, void *data);
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif

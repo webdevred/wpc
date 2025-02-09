@@ -28,54 +28,51 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdarg.h>
 
-#define GIB_LIST(a) ((gib_list*)a)
+#define GIB_LIST(a) ((gib_list *)a)
 
-enum __direction
-{ FORWARD, BACK };
+enum __direction { FORWARD, BACK };
 
 typedef struct __gib_list gib_list;
 
-struct __gib_list
-{
-   void *data;
+struct __gib_list {
+    void *data;
 
-   gib_list *next;
-   gib_list *prev;
+    gib_list *next;
+    gib_list *prev;
 };
 
-typedef int (gib_compare_fn) (void *data1, void *data2);
+typedef int(gib_compare_fn)(void *data1, void *data2);
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 gib_list *gib_list_new(void);
-extern gib_list *gib_list_add_front(gib_list * root, void *data);
-gib_list *gib_list_add_end(gib_list * root, void *data);
+extern gib_list *gib_list_add_front(gib_list *root, void *data);
+gib_list *gib_list_add_end(gib_list *root, void *data);
 /*
 gib_list *gib_list_add_at_pos(gib_list * root, int pos, void *data);
 gib_list *gib_list_pop_to_end(gib_list * root, gib_list * l);
 */
-gib_list *gib_list_unlink(gib_list * root, gib_list * l);
-gib_list *gib_list_cat(gib_list * root, gib_list * l);
-int gib_list_length(gib_list * l);
-gib_list *gib_list_first(gib_list * l);
-gib_list *gib_list_jump(gib_list * root, gib_list * l, int direction,
+gib_list *gib_list_unlink(gib_list *root, gib_list *l);
+gib_list *gib_list_cat(gib_list *root, gib_list *l);
+int gib_list_length(gib_list *l);
+gib_list *gib_list_first(gib_list *l);
+gib_list *gib_list_jump(gib_list *root, gib_list *l, int direction,
 
                         int num);
-gib_list *gib_list_reverse(gib_list * l);
-gib_list *gib_list_randomize(gib_list * list);
-int gib_list_num(gib_list * root, gib_list * l);
-gib_list *gib_list_remove(gib_list * root, gib_list * l);
-gib_list *gib_list_sort(gib_list * list, gib_compare_fn cmp);
-gib_list *gib_list_sort_merge(gib_list * l1, gib_list * l2,
+gib_list *gib_list_reverse(gib_list *l);
+gib_list *gib_list_randomize(gib_list *list);
+int gib_list_num(gib_list *root, gib_list *l);
+gib_list *gib_list_remove(gib_list *root, gib_list *l);
+gib_list *gib_list_sort(gib_list *list, gib_compare_fn cmp);
+gib_list *gib_list_sort_merge(gib_list *l1, gib_list *l2,
 
                               gib_compare_fn cmp);
 /*
 gib_list *gib_list_nth(gib_list * root, unsigned int num);
 */
-unsigned char gib_list_has_more_than_one_item(gib_list * root);
+unsigned char gib_list_has_more_than_one_item(gib_list *root);
 /*
 gib_list *gib_list_dup(gib_list * list);
 gib_list *gib_list_dup_special(gib_list * list,
@@ -84,8 +81,12 @@ gib_list *gib_list_move_down_by_one(gib_list * root, gib_list * l);
 gib_list *gib_list_move_up_by_one(gib_list * root, gib_list * l);
 */
 
-gib_list *gib_list_foreach(gib_list *root, void (*fe_func)(gib_list *node, void *data), void *data);
-gib_list *gib_list_find(gib_list *root, unsigned char (*find_func)(gib_list *node, void *data), void *data);
+gib_list *gib_list_foreach(gib_list *root,
+                           void (*fe_func)(gib_list *node, void *data),
+                           void *data);
+gib_list *gib_list_find(gib_list *root,
+                        unsigned char (*find_func)(gib_list *node, void *data),
+                        void *data);
 gib_list *gib_list_find_by_data(gib_list *root, void *data);
 
 /* don't really belong here, will do for now */
@@ -97,6 +98,5 @@ char *gib_strjoin(const char *separator, ...);
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif

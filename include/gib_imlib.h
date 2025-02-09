@@ -25,25 +25,34 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
+#include "gib_style.h"
+#include <Imlib2.h>
+#include <X11/Xlib.h>
+#include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <X11/Xlib.h>
-#include <Imlib2.h>
-#include <stdarg.h>
-#include <ctype.h>
-#include "gib_style.h"
 
-#define GIBCLIP(x, y, w, h, xx, yy, ww, hh) \
-{ \
-   if ((yy) > y) { h -= (yy) - y; y = (yy); } \
-   if ((yy) + hh < y + h) { h -= y + h - ((yy) + (hh)); } \
-   if ((xx) > x) { w -= (xx) - x; x = (xx); } \
-   if ((xx) + (ww)  x + w) { w -= x + w - ((xx) + (ww)); } \
-}
+#define GIBCLIP(x, y, w, h, xx, yy, ww, hh)                                    \
+    {                                                                          \
+        if ((yy) > y) {                                                        \
+            h -= (yy) - y;                                                     \
+            y = (yy);                                                          \
+        }                                                                      \
+        if ((yy) + hh < y + h) {                                               \
+            h -= y + h - ((yy) + (hh));                                        \
+        }                                                                      \
+        if ((xx) > x) {                                                        \
+            w -= (xx) - x;                                                     \
+            x = (xx);                                                          \
+        }                                                                      \
+        if ((xx) + (ww)x + w) {                                                \
+            w -= x + w - ((xx) + (ww));                                        \
+        }                                                                      \
+    }
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /*
@@ -65,39 +74,28 @@ void gib_imlib_render_image_on_drawable_with_rotation(Drawable d,
                                                       char dither, char blend,
                                                       char alias);
 */
-void gib_imlib_render_image_part_on_drawable_at_size(Drawable d,
-                                                     Imlib_Image im, int sx,
-                                                     int sy, int sw, int sh,
-                                                     int dx, int dy, int dw,
-                                                     int dh, char dither,
+void gib_imlib_render_image_part_on_drawable_at_size(Drawable d, Imlib_Image im,
+                                                     int sx, int sy, int sw,
+                                                     int sh, int dx, int dy,
+                                                     int dw, int dh,
+                                                     char dither,
 
                                                      char blend, char alias);
 
-void gib_imlib_render_image_part_on_drawable_at_size_with_rotation(Drawable d,
-                                                                   Imlib_Image
+void gib_imlib_render_image_part_on_drawable_at_size_with_rotation(
+    Drawable d,
+    Imlib_Image
 
-                                                                   im, int sx,
-                                                                   int sy,
-                                                                   int sw,
-                                                                   int sh,
-                                                                   int dx,
-                                                                   int dy,
-                                                                   int dw,
-                                                                   int dh,
-                                                                   double
-                                                                   angle,
-                                                                   char
-                                                                   dither,
-                                                                   char blend,
-                                                                   char
-                                                                   alias);
+        im,
+    int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh,
+    double angle, char dither, char blend, char alias);
 
-void gib_imlib_image_fill_rectangle(Imlib_Image im, int x, int y, int w,
-                                    int h, int r, int g, int b, int a);
-void gib_imlib_text_draw(Imlib_Image im, Imlib_Font fn, gib_style * s, int x,
+void gib_imlib_image_fill_rectangle(Imlib_Image im, int x, int y, int w, int h,
+                                    int r, int g, int b, int a);
+void gib_imlib_text_draw(Imlib_Image im, Imlib_Font fn, gib_style *s, int x,
                          int y, char *text, Imlib_Text_Direction dir, int r,
                          int g, int b, int a);
-void gib_imlib_get_text_size(Imlib_Font fn, char *text, gib_style * s, int *w,
+void gib_imlib_get_text_size(Imlib_Font fn, char *text, gib_style *s, int *w,
                              int *h, Imlib_Text_Direction dir);
 Imlib_Image gib_imlib_clone_image(Imlib_Image im);
 char *gib_imlib_image_format(Imlib_Image im);
@@ -112,12 +110,12 @@ Imlib_Image gib_imlib_create_cropped_scaled_image(Imlib_Image im, int sx,
                                                   int sy, int sw, int sh,
                                                   int dw, int dh, char alias);
 void gib_imlib_apply_color_modifier_to_rectangle(Imlib_Image im, int x, int y,
-                                                 int w, int h, DATA8 * rtab,
-                                                 DATA8 * gtab, DATA8 * btab,
-                                                 DATA8 * atab);
+                                                 int w, int h, DATA8 *rtab,
+                                                 DATA8 *gtab, DATA8 *btab,
+                                                 DATA8 *atab);
 void gib_imlib_save_image(Imlib_Image im, char *file);
 void gib_imlib_save_image_with_error_return(Imlib_Image im, char *file,
-                                            Imlib_Load_Error * error_return);
+                                            Imlib_Load_Error *error_return);
 void gib_imlib_free_font(Imlib_Font fn);
 void gib_imlib_image_draw_line(Imlib_Image im, int x1, int y1, int x2, int y2,
                                char make_updates, int r, int g, int b, int a);
@@ -126,11 +124,11 @@ Imlib_Image gib_imlib_create_rotated_image(Imlib_Image im, double angle);
 void gib_imlib_image_tile(Imlib_Image im);
 void gib_imlib_image_blur(Imlib_Image im, int radius);
 void gib_imlib_image_sharpen(Imlib_Image im, int radius);
-void gib_imlib_image_draw_rectangle(Imlib_Image im, int x, int y, int w,
-                                    int h, int r, int g, int b, int a);
+void gib_imlib_image_draw_rectangle(Imlib_Image im, int x, int y, int w, int h,
+                                    int r, int g, int b, int a);
 void gib_imlib_line_clip_and_draw(Imlib_Image dest, int x0, int y0, int x1,
-                                  int y1, int cx, int cy, int cw, int ch,
-                                  int r, int g, int b, int a);
+                                  int y1, int cx, int cy, int cw, int ch, int r,
+                                  int g, int b, int a);
 void gib_imlib_image_fill_polygon(Imlib_Image im, ImlibPolygon poly, int r,
                                   int g, int b, int a, unsigned char alias,
                                   int cx, int cy, int cw, int ch);
@@ -139,8 +137,8 @@ void gib_imlib_image_draw_polygon(Imlib_Image im, ImlibPolygon poly, int r,
                                   unsigned char alias, int cx, int cy, int cw,
 
                                   int ch);
-Imlib_Image gib_imlib_create_image_from_drawable(Drawable d, Pixmap mask,
-                                                 int x, int y, int width,
+Imlib_Image gib_imlib_create_image_from_drawable(Drawable d, Pixmap mask, int x,
+                                                 int y, int width,
 
                                                  int height,
                                                  char need_to_grab_x);

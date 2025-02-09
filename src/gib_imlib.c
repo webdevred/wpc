@@ -22,28 +22,17 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
-
 #include "gib_imlib.h"
-#include "utils.h"
+#include <string.h>
 
-int gib_imlib_image_get_width(Imlib_Image im) {
+extern int gib_imlib_image_get_width(Imlib_Image im) {
     imlib_context_set_image(im);
     return imlib_image_get_width();
 }
 
-int gib_imlib_image_get_height(Imlib_Image im) {
+extern int gib_imlib_image_get_height(Imlib_Image im) {
     imlib_context_set_image(im);
     return imlib_image_get_height();
-}
-
-int gib_imlib_image_has_alpha(Imlib_Image im) {
-    imlib_context_set_image(im);
-    return imlib_image_has_alpha();
-}
-
-void gib_imlib_free_image_and_decache(Imlib_Image im) {
-    imlib_context_set_image(im);
-    imlib_free_image_and_decache();
 }
 
 void gib_imlib_render_image_on_drawable(Drawable d, Imlib_Image im, int x,
@@ -58,10 +47,11 @@ void gib_imlib_render_image_on_drawable(Drawable d, Imlib_Image im, int x,
     imlib_render_image_on_drawable(x, y);
 }
 
-void gib_imlib_render_image_on_drawable_at_size(Drawable d, Imlib_Image im,
-                                                int x, int y, int w, int h,
-                                                char dither, char blend,
-                                                char alias) {
+extern void gib_imlib_render_image_on_drawable_at_size(Drawable d,
+                                                       Imlib_Image im, int x,
+                                                       int y, int w, int h,
+                                                       char dither, char blend,
+                                                       char alias) {
     imlib_context_set_image(im);
     imlib_context_set_drawable(d);
     imlib_context_set_anti_alias(alias);
@@ -71,7 +61,7 @@ void gib_imlib_render_image_on_drawable_at_size(Drawable d, Imlib_Image im,
     imlib_render_image_on_drawable_at_size(x, y, w, h);
 }
 
-void gib_imlib_render_image_part_on_drawable_at_size(
+extern void gib_imlib_render_image_part_on_drawable_at_size(
     Drawable d, Imlib_Image im, int sx, int sy, int sw, int sh, int dx, int dy,
     int dw, int dh, char dither, char blend, char alias) {
     imlib_context_set_image(im);
@@ -81,11 +71,6 @@ void gib_imlib_render_image_part_on_drawable_at_size(
     imlib_context_set_blend(blend);
     imlib_context_set_angle(0);
     imlib_render_image_part_on_drawable_at_size(sx, sy, sw, sh, dx, dy, dw, dh);
-}
-
-char *gib_imlib_image_format(Imlib_Image im) {
-    imlib_context_set_image(im);
-    return imlib_image_format();
 }
 
 void gib_imlib_save_image(Imlib_Image im, char *file) {

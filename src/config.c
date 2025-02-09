@@ -142,7 +142,7 @@ extern Config *load_config() {
 }
 
 extern void dump_config(Config *config) {
-    FILE *file = fopen(CONFIG_FILE, "w");
+    FILE *file = fopen(get_config_file(), "w");
     if (file == NULL) {
         perror("Error opening configuration file");
         exit(1);

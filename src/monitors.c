@@ -86,7 +86,7 @@ extern Monitor *wm_list_monitors(int *number_of_monitors) {
 
     return monitors;
 }
-
+#ifdef WPC_ENABLE_HELPER
 extern void dm_list_monitors(Monitor *primary_monitor,
                              Monitor *secondary_monitor,
                              int *number_of_other_monitors) {
@@ -153,7 +153,7 @@ extern void dm_list_monitors(Monitor *primary_monitor,
     XRRFreeScreenResources(screen_resources);
     XCloseDisplay(display);
 }
-
+#endif
 extern Monitor *get_monitor(char *monitor_name) {
     Display *display;
     Window root;

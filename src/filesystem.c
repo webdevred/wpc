@@ -55,13 +55,3 @@ extern Wallpaper *list_wallpapers(gchar *source_directory,
 
     return wallpaper_array;
 }
-
-extern Wallpaper get_wallpaper(gchar *wallpaper_path) {
-    Wallpaper wallpaper;
-
-    wallpaper.path = wallpaper_path;
-
-    set_resolution(&wallpaper);
-
-    return wallpaper;
-}

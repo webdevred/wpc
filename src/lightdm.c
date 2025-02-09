@@ -1,20 +1,24 @@
+#include <cjson/cJSON.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <glib.h>
 #include <gtk/gtk.h>
-#include <wand/MagickWand.h>
-
 #include <signal.h>
 #include <stdio.h>
 #include <sys/prctl.h>
 #include <unistd.h>
+#include <wand/MagickWand.h>
 
+#define DM_CONFIG_PAYLOAD
 #include "common.h"
+#include "config.h"
 #include "lightdm.h"
 #include "monitors.h"
 #include "resolution_scaling.h"
 #include "wpc.h"
+
+#define CONFIG_FILE "/etc/lightdm/slick-greeter.conf"
 
 static void format_dst_filename(gchar **dst_filename) {
     gchar *str = *dst_filename;
@@ -169,6 +173,39 @@ static void spawn_process_and_handle_io(char **argv, const char *payload) {
     g_io_channel_unref(err_channel);
 }
 
+static void dump_payload(char **payload, const char *config_file_path,
+                         const char *tmp_file_path, const char *dst_file_path,
+                         const bool primary_monitor) {
+
+    cJSON *payload_json = cJSON_CreateObject();
+
+    cJSON_AddStringToObject(payload_json, "configFilePath", config_file_path);
+    if (config_file_path == NULL) {
+        goto end;
+    }
+
+    cJSON_AddStringToObject(payload_json, "tmpFilePath", tmp_file_path);
+    if (config_file_path == NULL) {
+        goto end;
+    }
+
+    cJSON_AddStringToObject(payload_json, "dstFilePath", dst_file_path);
+    if (config_file_path == NULL) {
+        goto end;
+    }
+
+    cJSON_AddBoolToObject(payload_json, "updateForPrimaryMonitor",
+                          primary_monitor);
+    if (config_file_path == NULL) {
+        goto end;
+    }
+
+    *payload = cJSON_PrintUnformatted(payload_json);
+end:
+    cJSON_Delete(payload_json);
+    return;
+}
+
 extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
     char base_dir[] = "/usr/share/backgrounds/wpc/versions";
     char *storage_directory =
@@ -190,9 +227,9 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
 
     gchar *argv[] = {WPC_HELPER_PATH, NULL};
 
-    char *serialized_monitor_primary = monitor->primary ? "true" : "false";
-    char *payload = g_strdup_printf("%s %s %s", tmp_file_path, dst_file_path,
-                                    serialized_monitor_primary);
+    char *payload = NULL;
+    dump_payload(&payload, CONFIG_FILE, tmp_file_path, dst_file_path,
+                 monitor->primary);
 
     spawn_process_and_handle_io(argv, payload);
 
@@ -207,7 +244,7 @@ extern void lightdm_get_backgrounds(char **primary_monitor,
     char **config = NULL;
     int lines = 0;
 
-    if (parse_config(&config, &lines) != 0) {
+    if (lightdm_parse_config(&config, &lines) != 0) {
         fprintf(stderr, "Failed to parse config file.\n");
         return;
     }

@@ -8,13 +8,13 @@
 #include "logging.h"
 
 #include "filesystem.h"
-#include "imagemagick.h"
 #include "gui.h"
+#include "imagemagick.h"
 #include "monitors.h"
 #include "resolution_scaling.h"
 #include "wallpaper.h"
 
-#ifdef ENABLE_HELPER
+#ifdef WPC_ENABLE_HELPER
 #include "lightdm.h"
 #endif
 
@@ -43,13 +43,13 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
                                     wallpaper->path, monitor->width,
                                     monitor->height));
 
-#ifdef ENABLE_HELPER
+#ifdef WPC_ENABLE_HELPER
     GtkButton *button_menu_choice =
         g_object_get_data(G_OBJECT(app), "menu_choice");
-    
+
     gchar *menu_choice =
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
-    
+
     if (g_strcmp0(menu_choice, "dm_background") == 0) {
         lightdm_set_background(wallpaper, monitor);
     } else {
@@ -102,7 +102,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
                                (gpointer)new_config, g_free_config);
 
         set_wallpapers();
-#ifdef ENABLE_HELPER        
+#ifdef WPC_ENABLE_HELPER
     }
 #endif
 }
@@ -221,7 +221,7 @@ static void wm_show_monitors(GtkButton *button, gpointer user_data) {
     g_object_set_data(G_OBJECT(app), "menu_choice", (gpointer)button);
 }
 
-#ifdef ENABLE_HELPER
+#ifdef WPC_ENABLE_HELPER
 static void dm_show_monitors(GtkButton *button, gpointer user_data) {
     (void)button;
     GtkApplication *app = GTK_APPLICATION(user_data);
@@ -353,7 +353,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_set_visible(GTK_WIDGET(dm_monitors_box), false);
 
     setup_wm_monitors_box(app, menu_box, wm_monitors_box);
-#ifdef ENABLE_HELPER
+#ifdef WPC_ENABLE_HELPER
     setup_dm_monitors_box(app, menu_box, dm_monitors_box);
 #endif
 

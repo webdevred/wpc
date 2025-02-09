@@ -1,5 +1,6 @@
 clang
 -Iinclude
+-DWPC_ENABLE_HELPER
 -DMAGICKCORE_HDRI_ENABLE=0
 -DMAGICKCORE_QUANTUM_DEPTH=16
 -DWPC_HELPER_PATH="/usr/local/libexec/wpc/lightdm_helper"

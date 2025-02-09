@@ -14,8 +14,10 @@ typedef struct {
     MonitorBackgroundPair *monitors_with_backgrounds;
 } Config;
 
-void free_config(Config *config);
+extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr);
 
-Config *load_config(void);
+extern void free_config(Config *config);
 
-void dump_config(Config *config);
+extern Config *load_config(void);
+
+extern void dump_config(Config *config);

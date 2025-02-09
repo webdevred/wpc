@@ -8,12 +8,13 @@ WPC_HELPER_INSTALL_DIR := /usr/local/libexec/wpc
 WPC_HELPER_PATH := $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
 
 COMMON_CFLAGS := -Wall -Wextra -std=c23 -g3
-WPC_CFLAGS := $(COMMON_CFLAGS) $(shell pkg-config --cflags gtk4 glib-2.0 MagickWand libcjson) \
-              -DWPC_HELPER_PATH="\"$(WPC_HELPER_PATH)\""
-WPC_LDFLAGS := $(shell pkg-config --libs gtk4 glib-2.0 x11 xrandr MagickWand imlib2 libcjson)
+COMMON_LDFLAGS := $(shell pkg-config --libs libcjson)
+
+WPC_CFLAGS := $(COMMON_CFLAGS) $(shell pkg-config --cflags gtk4 glib-2.0 MagickWand libcjson) -DWPC_HELPER_PATH="\"$(WPC_HELPER_PATH)\""
+WPC_LDFLAGS := $(COMMON_LDFLAGS) $(shell pkg-config --libs gtk4 glib-2.0 x11 xrandr MagickWand imlib2)
 
 HELPER_CFLAGS := $(COMMON_CFLAGS)
-HELPER_LDFLAGS :=
+HELPER_LDFLAGS := $(COMMON_LDFLAGS)
 
 SRC_DIR := src
 BUILD_DIR := build
@@ -24,15 +25,17 @@ WPC_SRCS := $(wildcard $(SRC_DIR)/*.c)
 WPC_SRCS := $(filter-out $(SRC_DIR)/wpc_lightdm_helper.c $(SRC_DIR)/lightdm.c, $(WPC_SRCS))
 
 ifeq ($(WPC_HELPER), 1)
-    WPC_CFLAGS += -DENABLE_HELPER
     WPC_SRCS += $(SRC_DIR)/lightdm.c
+    WPC_CFLAGS += -DWPC_ENABLE_HELPER
     HELPER_SRCS := $(SRC_DIR)/wpc_lightdm_helper.c $(SRC_DIR)/common.c
-else
-    HELPER_SRCS :=
 endif
 
 WPC_OBJS := $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(WPC_SRCS))
 HELPER_OBJS := $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(HELPER_SRCS))
+
+WPC_BC := $(patsubst $(SRC_DIR)/%.c, $(BC_DIR)/%.bc, $(WPC_SRCS))
+HELPER_BC := $(patsubst $(SRC_DIR)/%.c, $(BC_DIR)/%.bc, $(HELPER_SRCS))
+BC_FILES := $(WPC_BC) $(HELPER_BC)
 
 TARGETS := wpc
 ifeq ($(WPC_HELPER), 1)
@@ -54,8 +57,10 @@ wpc_lightdm_helper: $(HELPER_OBJS)
 endif
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
-	$(CC) $(if $(filter $(HELPER_SRCS), $<),$(HELPER_CFLAGS),$(WPC_CFLAGS)) \
-        -I$(INCLUDE_DIR) -MMD -MP -c $< -o $@
+	$(CC) $(if $(filter $(HELPER_SRCS), $<),$(HELPER_CFLAGS),$(WPC_CFLAGS)) -I$(INCLUDE_DIR) -MMD -MP -c $< -o $@
+
+$(BC_DIR)/%.bc: $(SRC_DIR)/%.c | $(BC_DIR)
+	$(CC) $(if $(filter $(HELPER_SRCS), $<),$(HELPER_CFLAGS),$(WPC_CFLAGS)) -I$(INCLUDE_DIR) -I/usr/include/glib-2.0 -c -emit-llvm $< -o $@
 
 $(BUILD_DIR) $(BC_DIR) $(WPC_INSTALL_DIR) $(WPC_HELPER_INSTALL_DIR):
 	mkdir -p $@
@@ -69,8 +74,7 @@ endif
 clean:
 	rm -rf $(BUILD_DIR) $(BC_DIR) $(TARGETS)
 
-bc: | $(BC_DIR)
-	$(foreach SRC,$(WPC_SRCS),$(CC) -emit-llvm -c $(SRC) -o $(patsubst $(SRC_DIR)/%.c,$(BC_DIR)/%.bc,$(SRC));)
+bc: $(BC_FILES)
 
 ccls:
 	echo clang > .ccls

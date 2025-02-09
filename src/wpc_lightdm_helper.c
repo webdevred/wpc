@@ -1,5 +1,7 @@
 #include "common.h"
 
+#include <cjson/cJSON.h>
+
 #include <assert.h>
 #include <dirent.h>
 #include <errno.h>
@@ -45,7 +47,7 @@ static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
     char **config = NULL;
     int lines = 0;
     bool found = false;
-    if (parse_config(&config, &lines) == 0) {
+    if (lightdm_parse_config(&config, &lines) == 0) {
         FILE *file = fopen(CONFIG_FILE, "w");
         if (file == NULL) {
             fprintf(stderr, "Error opening configuration file for writing");
@@ -97,11 +99,64 @@ static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
     return 0;
 }
 
+static bool load_config(const char *payload, char **config_file_path,
+                        char **tmp_file_path, char **dst_file_path,
+                        bool *primary_monitor) {
+    cJSON *payload_json = cJSON_Parse(payload);
+
+    if (!payload_json) {
+        fprintf(stderr, "JSON parsing error\n");
+        return 1;
+    }
+
+    bool failed = false;
+
+    cJSON *config_file_path_json =
+        cJSON_GetObjectItemCaseSensitive(payload_json, "configFilePath");
+    if (cJSON_IsString(config_file_path_json) &&
+        config_file_path_json->valuestring) {
+        *config_file_path = strdup(config_file_path_json->valuestring);
+    } else {
+        failed = true;
+    }
+
+    cJSON *tmp_file_path_json =
+        cJSON_GetObjectItemCaseSensitive(payload_json, "tmpFilePath");
+    if (cJSON_IsString(tmp_file_path_json) && tmp_file_path_json->valuestring) {
+        *tmp_file_path = strdup(tmp_file_path_json->valuestring);
+    } else {
+        failed = true;
+    }
+
+    cJSON *dst_file_path_json =
+        cJSON_GetObjectItemCaseSensitive(payload_json, "dstFilePath");
+    if (cJSON_IsString(dst_file_path_json) && dst_file_path_json->valuestring) {
+        *dst_file_path = strdup(dst_file_path_json->valuestring);
+    } else {
+        failed = true;
+    }
+
+    cJSON *primary_monitor_json = cJSON_GetObjectItemCaseSensitive(
+        payload_json, "updateForPrimaryMonitor");
+    if (cJSON_IsString(primary_monitor_json) &&
+        primary_monitor_json->valuestring) {
+        *primary_monitor = strdup(primary_monitor_json->valuestring);
+    } else {
+        failed = true;
+    }
+
+    cJSON_Delete(payload_json);
+    return failed;
+}
+
+static void free_maybe(char *str) { free(str); }
+
 extern int main(int argc, char **argv) {
     (void)argc, (void)argv;
     char buffer[BUFFER_SIZE];
     ssize_t count;
 
+    char *config_file_path;
     char *tmp_wallpaper_path;
     char *dst_wallpaper_path;
     bool monitor_primary;
@@ -112,20 +167,18 @@ extern int main(int argc, char **argv) {
     if (count > 0) {
         buffer[count] = '\0';
 
-        char *delimiter;
-        delimiter = strchr(buffer, ' ');
+        if (!load_config(buffer, &config_file_path, &tmp_wallpaper_path,
+                         &dst_wallpaper_path, &monitor_primary)) {
+            fprintf(stderr, "received invalid payload: %s\n", buffer);
+            return 1;
+        }
 
-        *delimiter = '\0';
-        fflush(stderr);
-        tmp_wallpaper_path = strdup(buffer);
-        dst_wallpaper_path = strdup(delimiter + 1);
-        delimiter = strchr(dst_wallpaper_path, ' ');
-        *delimiter = '\0';
-        monitor_primary = strcmp(delimiter + 1, "true") == 0 ? true : false;
-
-        fprintf(stderr, "%s %s\n", tmp_wallpaper_path, dst_wallpaper_path);
         status = set_background(tmp_wallpaper_path, dst_wallpaper_path,
                                 monitor_primary);
+
+        free_maybe(config_file_path);
+        free_maybe(tmp_wallpaper_path);
+        free_maybe(dst_wallpaper_path);
     }
     return status;
 }

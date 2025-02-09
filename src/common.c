@@ -7,7 +7,7 @@
 #include "common.h"
 #include "wpc.h"
 
-extern int parse_config(char ***config_ptr, int *lines_ptr) {
+extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr) {
     FILE *file = fopen(CONFIG_FILE, "r");
     if (file == NULL) {
         perror("Error opening configuration file");

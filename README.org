@@ -1,0 +1,59 @@
+#+TITLE: WPC - Desktop and Lock Screen Wallpaper Setter
+#+AUTHOR: Your Name
+#+EMAIL: your.email@example.com
+#+DATE: 2025-02-06
+
+* Introduction
+
+WPC (Wallpaper Changer) is a program that allows the user to set wallpapers for both the desktop and lock screen. It is a simple and easy-to-use application that lets you personalize your computer and make it more visually appealing.
+
+The program supports various image formats and makes it easy to change the wallpaper with a user-friendly interface.
+
+* Features
+
+- Set wallpaper for the desktop.
+- Set wallpaper for the lock screen.
+- Support for common image formats (JPEG, PNG, BMP, etc.).
+- Simple and intuitive GUI.
+
+* COMMENT Installation
+
+To install WPC, follow these steps:
+
+#+begin_src bash
+  git clone https://github.com/webdevred/wpc
+  cd wpc
+  make
+  sudo make install
+#+end_src
+
+* Usage
+
+Right now, you need to create this config file in ~/.config/wpc/settings.json before you start the program.
+
+#+begin_src js
+  {
+      "sourceDirectoryPath" : "/mnt/HDD/backgrounds/",
+      "monitorsWithBackgrounds": []
+  }
+#+end_src
+
+1. **Set Desktop Wallpaper**:
+   - Open the program by running wpc in your terminal
+   - Browse to select an image file from your computer
+   - The image will now applied for the correct monitor
+
+2. **Set Lock Screen Wallpaper**:
+   - Select the "Lock Screen" tab.
+   - Follow the same process as the desktop wallpaper to select an image file or URL.
+
+* System Requirements
+
+- **Requirements**:
+  - libimlib2-dev
+  - imagemagick
+  - libcjson-dev
+
+* License
+
+WPC is licensed under the MIT License. See the LICENSE file for more information.

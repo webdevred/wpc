@@ -1,8 +1,9 @@
-bc_files
-build
-wpc_lightdm_helper
-wpc
-.ccls-cache
+/bc_files
+/build
+/wpc_lightdm_helper
+/wpc
+/.ccls-cache
+/compile_commands.json
 **/*~
 **/#*#
 **/.#*

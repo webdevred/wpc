@@ -188,7 +188,7 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
         logprintf(ERROR, "Failed to scale image");
     }
 
-    gchar *argv[] = {"/usr/local/libexec/wpc/lightdm_helper", NULL};
+    gchar *argv[] = {WPC_HELPER_PATH, NULL};
 
     char *serialized_monitor_primary = monitor->primary ? "true" : "false";
     char *payload = g_strdup_printf("%s %s %s", tmp_file_path, dst_file_path,

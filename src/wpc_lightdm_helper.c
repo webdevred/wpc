@@ -12,7 +12,7 @@
 
 #define BUFFER_SIZE 1024
 
-int mkpath(char *file_path, mode_t mode) {
+static int mkpath(char *file_path, mode_t mode) {
     assert(file_path && *file_path);
     for (char *p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
@@ -29,14 +29,13 @@ int mkpath(char *file_path, mode_t mode) {
 
 static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
                           bool primary_monitor) {
-    char *storage_directory = dirname(dst_wallpaper_path);
+    char *storage_directory = dirname(strdup(dst_wallpaper_path));
     DIR *dir = opendir(storage_directory);
     if (dir) {
         closedir(dir);
     } else if (errno == ENOENT) {
-        if (mkdir(storage_directory, 0775) != 0) {
-            printf("Failed to create storage directory");
-            fflush(stdout);
+        if (mkpath(storage_directory, 0775) != 0) {
+            fprintf(stderr, "Failed to create storage directory");
             return 1;
         }
     }
@@ -49,8 +48,7 @@ static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
     if (parse_config(&config, &lines) == 0) {
         FILE *file = fopen(CONFIG_FILE, "w");
         if (file == NULL) {
-            printf("Error opening configuration file for writing");
-            fflush(stdout);
+            fprintf(stderr, "Error opening configuration file for writing");
             free(storage_directory);
             for (int i = 0; i < lines; i++) {
                 free(config[i]);
@@ -66,11 +64,10 @@ static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
             if (delimiter) {
                 *delimiter = '\0';
                 char *key = line;
-                if (primary_monitor &&
-                    strcmp(key, "background") == 0) {
+                if (primary_monitor && strcmp(key, "background") == 0) {
                     fprintf(file, "%s=%s\n", key, dst_wallpaper_path);
                     found = true;
-                } else if (! primary_monitor &&
+                } else if (!primary_monitor &&
                            strcmp(key, "other-monitors-logo") == 0) {
                     fprintf(file, "%s=%s\n", key, dst_wallpaper_path);
                     found = true;
@@ -119,13 +116,14 @@ extern int main(int argc, char **argv) {
         delimiter = strchr(buffer, ' ');
 
         *delimiter = '\0';
-
+        fflush(stderr);
         tmp_wallpaper_path = strdup(buffer);
         dst_wallpaper_path = strdup(delimiter + 1);
         delimiter = strchr(dst_wallpaper_path, ' ');
         *delimiter = '\0';
         monitor_primary = strcmp(delimiter + 1, "true") == 0 ? true : false;
 
+        fprintf(stderr, "%s %s\n", tmp_wallpaper_path, dst_wallpaper_path);
         status = set_background(tmp_wallpaper_path, dst_wallpaper_path,
                                 monitor_primary);
     }

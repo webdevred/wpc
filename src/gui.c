@@ -8,13 +8,15 @@
 #include "logging.h"
 
 #include "filesystem.h"
-#include "gui.h"
 #include "imagemagick.h"
-#include "lightdm.h"
+#include "gui.h"
 #include "monitors.h"
 #include "resolution_scaling.h"
-#include "strings.h"
 #include "wallpaper.h"
+
+#ifdef ENABLE_HELPER
+#include "lightdm.h"
+#endif
 
 extern void g_free_config(gpointer data) {
     Config *config = (Config *)data;
@@ -41,15 +43,17 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
                                     wallpaper->path, monitor->width,
                                     monitor->height));
 
+#ifdef ENABLE_HELPER
     GtkButton *button_menu_choice =
         g_object_get_data(G_OBJECT(app), "menu_choice");
-
+    
     gchar *menu_choice =
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
-
+    
     if (g_strcmp0(menu_choice, "dm_background") == 0) {
         lightdm_set_background(wallpaper, monitor);
     } else {
+#endif
         Config *config = g_object_get_data(G_OBJECT(app), "configuration");
         char *monitor_name = monitor->name;
         char *wallpaper_path = wallpaper->path;
@@ -98,7 +102,9 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
                                (gpointer)new_config, g_free_config);
 
         set_wallpapers();
+#ifdef ENABLE_HELPER        
     }
+#endif
 }
 
 static void free_wallpapers(gpointer data) {
@@ -215,6 +221,7 @@ static void wm_show_monitors(GtkButton *button, gpointer user_data) {
     g_object_set_data(G_OBJECT(app), "menu_choice", (gpointer)button);
 }
 
+#ifdef ENABLE_HELPER
 static void dm_show_monitors(GtkButton *button, gpointer user_data) {
     (void)button;
     GtkApplication *app = GTK_APPLICATION(user_data);
@@ -288,6 +295,7 @@ void setup_dm_monitors_box(GtkApplication *app, GtkWidget *menu_box,
         free(secondary_monitor);
     }
 }
+#endif
 
 void setup_wm_monitors_box(GtkApplication *app, GtkWidget *menu_box,
                            GtkWidget *monitors_box) {
@@ -301,8 +309,6 @@ void setup_wm_monitors_box(GtkApplication *app, GtkWidget *menu_box,
 
     int number_of_monitors;
     Monitor *monitors = wm_list_monitors(&number_of_monitors);
-
-    /* destroy_all_widgets(monitors_box); */
 
     for (int monitor_id = 0; monitor_id < number_of_monitors; monitor_id++) {
         Monitor *monitor = &monitors[monitor_id];
@@ -347,7 +353,9 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_set_visible(GTK_WIDGET(dm_monitors_box), false);
 
     setup_wm_monitors_box(app, menu_box, wm_monitors_box);
+#ifdef ENABLE_HELPER
     setup_dm_monitors_box(app, menu_box, dm_monitors_box);
+#endif
 
     GtkWidget *status_selected_monitor = gtk_label_new("");
     gtk_label_set_selectable(GTK_LABEL(status_selected_monitor), false);
@@ -358,7 +366,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_set_visible(window, true);
 }
 
-extern int initialize_application(int argc, char **argv, int *socket) {
+extern int initialize_application(int argc, char **argv) {
     GtkApplication *app;
     int status;
     app = gtk_application_new("org.webdevred.wpc", G_APPLICATION_DEFAULT_FLAGS);

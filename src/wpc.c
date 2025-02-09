@@ -44,5 +44,5 @@ int main(int argc, char **argv) {
     g_log_set_handler("Gtk", G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL,
                       custom_log_handler, NULL);
 
-    return initialize_application(argc, argv, NULL);
+    return initialize_application(argc, argv);
 }

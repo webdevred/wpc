@@ -1,3 +1,3 @@
 #pragma once
 
-extern int initialize_application(int argc, char **argv, int *socket);
+extern int initialize_application(int argc, char **argv);

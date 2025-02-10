@@ -29,7 +29,8 @@ To install WPC, follow these steps:
 
 * Usage
 
-Right now, you need to create this config file in ~/.config/wpc/settings.json before you start the program.
+You can create this config file in ~/.config/wpc/settings.json before you start the program.
+If you do not create a config file then source directory will be set to your pictures directory in your home directory.
 
 #+begin_src js
   {
@@ -38,21 +39,24 @@ Right now, you need to create this config file in ~/.config/wpc/settings.json be
   }
 #+end_src
 
-1. **Set Desktop Wallpaper**:
+1. Set Desktop Wallpaper:
    - Open the program by running wpc in your terminal
    - Browse to select an image file from your computer
    - The image will now applied for the correct monitor
 
-2. **Set Lock Screen Wallpaper**:
+2. Set Lock Screen Wallpaper:
    - Select the "Lock Screen" tab.
    - Follow the same process as the desktop wallpaper to select an image file or URL.
 
 * System Requirements
 
-- **Requirements**:
+- Requirements:
+  - libxrandr-dev
+  - libx11-dev
+  - libgtk4-dev
   - libimlib2-dev
-  - imagemagick
   - libcjson-dev
+  - libmagickwand-6-headers
 
 * License
 

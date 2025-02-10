@@ -149,7 +149,9 @@ static bool load_config(const char *payload, char **config_file_path,
     return failed;
 }
 
-static void free_maybe(char *str) { free(str); }
+static void free_maybe(char *str) {
+    if (str) free(str);
+}
 
 extern int main(int argc, char **argv) {
     (void)argc, (void)argv;

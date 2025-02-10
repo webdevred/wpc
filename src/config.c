@@ -37,21 +37,41 @@ extern void free_config(Config *config) {
     }
 }
 
+static void get_xdg_pictures_dir(Config *config) {
+    const char *xdg_pictures_dir =
+        g_get_user_special_dir(G_USER_DIRECTORY_PICTURES);
+    config->source_directory = strdup(xdg_pictures_dir);
+    printf("%s", config->source_directory);
+}
+
+static void append_slash_path(Config *config) {
+    char *source_directory = config->source_directory;
+    const int length = strlen(source_directory);
+    if (source_directory[length] != '/') {
+        config->source_directory =
+            realloc(config->source_directory, length + 1);
+        config->source_directory = g_strdup_printf("%s/", source_directory);
+    }
+}
+
 extern Config *load_config() {
     FILE *file = fopen(get_config_file(), "r");
+    Config *config = (Config *)malloc(sizeof(Config));
+
+    config->monitors_with_backgrounds = NULL;
+    config->number_of_monitors = 0;
+
     if (file == NULL) {
-        perror("Error opening configuration file");
-        return NULL;
+        get_xdg_pictures_dir(config);
+        append_slash_path(config);
+        return config;
     }
 
-    Config *config = (Config *)malloc(sizeof(Config));
     if (!config) {
         perror("Memory allocation failed");
         fclose(file);
         return NULL;
     }
-    config->monitors_with_backgrounds = NULL;
-    config->number_of_monitors = 0;
 
     size_t capacity = 255;
     char *file_content = malloc(capacity);
@@ -98,7 +118,11 @@ extern Config *load_config() {
         cJSON_GetObjectItemCaseSensitive(settings_json, "sourceDirectoryPath");
     if (cJSON_IsString(directory_json) && directory_json->valuestring) {
         config->source_directory = strdup(directory_json->valuestring);
+    } else {
+        get_xdg_pictures_dir(config);
     }
+
+    append_slash_path(config);
 
     cJSON *monitors_json = cJSON_GetObjectItemCaseSensitive(
         settings_json, "monitorsWithBackgrounds");

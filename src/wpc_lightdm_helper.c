@@ -14,7 +14,7 @@
 
 #define BUFFER_SIZE 1024
 
-static int mkpath(char *file_path, mode_t mode) {
+static int create_storage_dir(char *file_path, mode_t mode) {
     assert(file_path && *file_path);
     for (char *p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
@@ -36,7 +36,7 @@ static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
     if (dir) {
         closedir(dir);
     } else if (errno == ENOENT) {
-        if (mkpath(storage_directory, 0775) != 0) {
+        if (create_storage_dir(dst_wallpaper_path, 0775) != 0) {
             fprintf(stderr, "Failed to create storage directory");
             return 1;
         }

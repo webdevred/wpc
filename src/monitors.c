@@ -123,26 +123,29 @@ extern void dm_list_monitors(Monitor *primary_monitor,
         if (outputInfo->connection == RR_Connected) {
             crtcInfo =
                 XRRGetCrtcInfo(display, screen_resources, outputInfo->crtc);
-            if (crtcInfo && screen_resources->outputs[i] == primaryOutput) {
-                primary_monitor->name =
-                    malloc((strlen(outputInfo->name) + 1) * sizeof(char));
-                strcpy(primary_monitor->name, outputInfo->name);
-
-                primary_monitor->width = crtcInfo->width;
-                primary_monitor->height = crtcInfo->height;
-                primary_monitor->primary = true;
-            } else {
+            if (crtcInfo) {
                 unsigned int crtc_width = crtcInfo->width;
                 unsigned int crtc_height = crtcInfo->height;
-                if (secondary_monitor->width < crtc_width ||
-                    secondary_monitor->height < crtc_height) {
-                    secondary_monitor->name =
+
+                if (screen_resources->outputs[i] == primaryOutput) {
+                    primary_monitor->name =
                         malloc((strlen(outputInfo->name) + 1) * sizeof(char));
-                    strcpy(secondary_monitor->name, outputInfo->name);
-                    secondary_monitor->width = crtc_width;
-                    secondary_monitor->height = crtc_height;
+                    strcpy(primary_monitor->name, outputInfo->name);
+
+                    primary_monitor->width = crtc_width;
+                    primary_monitor->height = crtc_height;
+                    primary_monitor->primary = true;
+                } else {
+                    if (secondary_monitor->width < crtc_width ||
+                        secondary_monitor->height < crtc_height) {
+                        secondary_monitor->name = malloc(
+                            (strlen(outputInfo->name) + 1) * sizeof(char));
+                        strcpy(secondary_monitor->name, outputInfo->name);
+                        secondary_monitor->width = crtc_width;
+                        secondary_monitor->height = crtc_height;
+                    }
+                    (*number_of_other_monitors)++;
                 }
-                (*number_of_other_monitors)++;
             }
             XRRFreeCrtcInfo(crtcInfo);
         }

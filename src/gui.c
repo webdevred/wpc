@@ -353,10 +353,12 @@ static void storage_dir_chosen (GObject *source_object, GAsyncResult *res, gpoin
 
 static void choose_source_dir(GtkWidget *button, gpointer user_data) {
     GtkApplication *app = GTK_APPLICATION(user_data);
+    Config *config = g_object_get_data(G_OBJECT(app), "configuration");
     GtkWindow *window = gtk_application_get_active_window(app);
-
+    GFile *initial_src_dir = g_file_new_for_path(config->source_directory);
     GtkFileDialog *dialog = gtk_file_dialog_new();
     dialog = gtk_file_dialog_new();
+    gtk_file_dialog_set_initial_folder(dialog, initial_src_dir);
     gtk_file_dialog_select_folder(dialog, GTK_WINDOW(window), NULL,
                                   storage_dir_chosen, (gpointer)app);
     g_object_unref(dialog);

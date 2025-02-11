@@ -23,8 +23,6 @@ static void free_monitor_background_pair(MonitorBackgroundPair *pair) {
 
 extern void free_config(Config *config) {
     if (config) {
-        free(config->source_directory);
-
         if (config->monitors_with_backgrounds) {
             for (int i = 0; i < config->number_of_monitors; i++) {
                 free_monitor_background_pair(
@@ -40,18 +38,28 @@ extern void free_config(Config *config) {
 static void get_xdg_pictures_dir(Config *config) {
     const char *xdg_pictures_dir =
         g_get_user_special_dir(G_USER_DIRECTORY_PICTURES);
-    config->source_directory = strdup(xdg_pictures_dir);
+    strcpy(config->source_directory, xdg_pictures_dir);
     printf("%s", config->source_directory);
 }
 
 static void append_slash_path(Config *config) {
-    char *source_directory = config->source_directory;
-    const int length = strlen(source_directory);
-    if (source_directory[length] != '/') {
-        config->source_directory =
-            realloc(config->source_directory, length + 1);
-        config->source_directory = g_strdup_printf("%s/", source_directory);
+    size_t length = strlen(config->source_directory);
+
+    if (config->source_directory[length - 1] != '/') {
+        char *new_str = malloc(length + 2);
+        if (!new_str) {
+            return;
+        }
+
+        strcpy(new_str, config->source_directory);
+        strcat(new_str, "/");
+
+        strcpy(config->source_directory, new_str);
     }
+}
+
+extern void update_source_directory(Config *config, char* new_src_dir) {
+     strcpy(config->source_directory, new_src_dir);
 }
 
 extern Config *load_config() {
@@ -117,7 +125,7 @@ extern Config *load_config() {
     cJSON *directory_json =
         cJSON_GetObjectItemCaseSensitive(settings_json, "sourceDirectoryPath");
     if (cJSON_IsString(directory_json) && directory_json->valuestring) {
-        config->source_directory = strdup(directory_json->valuestring);
+      strcpy(config->source_directory, directory_json->valuestring);
     } else {
         get_xdg_pictures_dir(config);
     }

@@ -326,6 +326,42 @@ void setup_wm_monitors_box(GtkApplication *app, GtkWidget *menu_box,
                            free_monitors);
 }
 
+static void storage_dir_chosen (GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    GtkApplication *app = GTK_APPLICATION(user_data);
+    Config *config = g_object_get_data(G_OBJECT(app), "configuration");
+
+    GtkFileDialog *dialog = GTK_FILE_DIALOG(source_object);
+    GFile *dir;
+    GError *err = NULL;
+
+    char *new_src_dir;
+
+    if ((dir = gtk_file_dialog_select_folder_finish(dialog, res, &err)) ==
+        NULL) {
+        g_warning("%s\n", err->message);
+        g_error_free(err);
+        return;
+    }
+    new_src_dir = g_file_get_path(dir);
+
+    update_source_directory(config, new_src_dir);
+    dump_config(config);
+    Config *new_config = load_config();
+    g_object_set_data_full(G_OBJECT(app), "configuration", (gpointer)new_config,
+                           g_free_config);
+}
+
+static void choose_source_dir(GtkWidget *button, gpointer user_data) {
+    GtkApplication *app = GTK_APPLICATION(user_data);
+    GtkWindow *window = gtk_application_get_active_window(app);
+
+    GtkFileDialog *dialog = gtk_file_dialog_new();
+    dialog = gtk_file_dialog_new();
+    gtk_file_dialog_select_folder(dialog, GTK_WINDOW(window), NULL,
+                                  storage_dir_chosen, (gpointer)app);
+    g_object_unref(dialog);
+}
+
 static void activate(GtkApplication *app, gpointer user_data) {
     (void)user_data;
 
@@ -356,6 +392,12 @@ static void activate(GtkApplication *app, gpointer user_data) {
 #ifdef WPC_ENABLE_HELPER
     setup_dm_monitors_box(app, menu_box, dm_monitors_box);
 #endif
+
+    GtkWidget *button_settings = gtk_button_new_with_label("Settings");
+
+    g_signal_connect(button_settings, "clicked",
+                     G_CALLBACK(choose_source_dir), (gpointer)app);
+    gtk_box_append(GTK_BOX(menu_box), button_settings);
 
     GtkWidget *status_selected_monitor = gtk_label_new("");
     gtk_label_set_selectable(GTK_LABEL(status_selected_monitor), false);

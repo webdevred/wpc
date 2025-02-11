@@ -9,14 +9,16 @@ typedef struct {
 } MonitorBackgroundPair;
 
 typedef struct {
-    char *source_directory;
     int number_of_monitors;
     MonitorBackgroundPair *monitors_with_backgrounds;
+    char source_directory[4096];
 } Config;
 
 extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr);
 
 extern void free_config(Config *config);
+
+extern void update_source_directory(Config *config, char* new_src_dir);
 
 extern Config *load_config(void);
 

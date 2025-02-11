@@ -326,20 +326,23 @@ void setup_wm_monitors_box(GtkApplication *app, GtkWidget *menu_box,
                            free_monitors);
 }
 
-static void storage_dir_chosen (GObject *source_object, GAsyncResult *res, gpointer user_data) {
+static void storage_dir_chosen(GObject *source_object, GAsyncResult *res,
+                               gpointer user_data) {
     GtkApplication *app = GTK_APPLICATION(user_data);
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
 
     GtkFileDialog *dialog = GTK_FILE_DIALOG(source_object);
     GFile *dir;
     GError *err = NULL;
-
     char *new_src_dir;
+    dir = gtk_file_dialog_select_folder_finish(dialog, res, &err);
 
-    if ((dir = gtk_file_dialog_select_folder_finish(dialog, res, &err)) ==
-        NULL) {
-        g_warning("%s\n", err->message);
-        g_error_free(err);
+    if (dir == NULL && err->code == 2) {
+        return;
+    }
+
+    if (dir == NULL && err->code != 2) {
+        g_warning("Error code: %d Error: %s", err->code, err->message);
         return;
     }
     new_src_dir = g_file_get_path(dir);
@@ -352,6 +355,7 @@ static void storage_dir_chosen (GObject *source_object, GAsyncResult *res, gpoin
 }
 
 static void choose_source_dir(GtkWidget *button, gpointer user_data) {
+    (void)button;
     GtkApplication *app = GTK_APPLICATION(user_data);
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
     GtkWindow *window = gtk_application_get_active_window(app);
@@ -397,8 +401,8 @@ static void activate(GtkApplication *app, gpointer user_data) {
 
     GtkWidget *button_settings = gtk_button_new_with_label("Settings");
 
-    g_signal_connect(button_settings, "clicked",
-                     G_CALLBACK(choose_source_dir), (gpointer)app);
+    g_signal_connect(button_settings, "clicked", G_CALLBACK(choose_source_dir),
+                     (gpointer)app);
     gtk_box_append(GTK_BOX(menu_box), button_settings);
 
     GtkWidget *status_selected_monitor = gtk_label_new("");

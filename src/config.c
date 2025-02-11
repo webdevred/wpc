@@ -58,8 +58,8 @@ static void append_slash_path(Config *config) {
     }
 }
 
-extern void update_source_directory(Config *config, char* new_src_dir) {
-     strcpy(config->source_directory, new_src_dir);
+extern void update_source_directory(Config *config, char *new_src_dir) {
+    strcpy(config->source_directory, new_src_dir);
 }
 
 extern Config *load_config() {
@@ -125,7 +125,7 @@ extern Config *load_config() {
     cJSON *directory_json =
         cJSON_GetObjectItemCaseSensitive(settings_json, "sourceDirectoryPath");
     if (cJSON_IsString(directory_json) && directory_json->valuestring) {
-      strcpy(config->source_directory, directory_json->valuestring);
+        strcpy(config->source_directory, directory_json->valuestring);
     } else {
         get_xdg_pictures_dir(config);
     }

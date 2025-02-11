@@ -18,7 +18,7 @@ extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr);
 
 extern void free_config(Config *config);
 
-extern void update_source_directory(Config *config, char* new_src_dir);
+extern void update_source_directory(Config *config, char *new_src_dir);
 
 extern Config *load_config(void);
 

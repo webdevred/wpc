@@ -35,21 +35,12 @@ extern Wallpaper *list_wallpapers(gchar *source_directory,
 
         Wallpaper *wallpaper = &wallpaper_array[wallpaper_array_size];
 
-        wallpaper_array[wallpaper_array_size].path =
-            malloc(strlen(source_directory) * sizeof(char *) +
-                   strlen(filename) * sizeof(char *) + sizeof(char *));
-        if (wallpaper_array[wallpaper_array_size].path) {
-            strcpy(wallpaper->path, source_directory);
-            strcat(wallpaper->path, filename);
-            set_resolution(wallpaper);
-            wallpaper_array_size++;
-        }
+        strcpy(wallpaper->path, source_directory);
+        strcat(wallpaper->path, filename);
+        set_resolution(wallpaper);
+        wallpaper_array_size++;
     }
     closedir(dir);
-
-    wallpaper_array = realloc(wallpaper_array,
-                              (wallpaper_array_size + 1) * sizeof(Wallpaper));
-    wallpaper_array[wallpaper_array_size].path = NULL;
 
     *number_of_images = wallpaper_array_size;
 

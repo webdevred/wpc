@@ -64,8 +64,6 @@ extern Monitor *wm_list_monitors(int *number_of_monitors) {
                 (*number_of_monitors)++;
                 monitors =
                     realloc(monitors, *number_of_monitors * sizeof(Monitor));
-                monitors[i].name =
-                    malloc((strlen(outputInfo->name) + 1) * sizeof(char));
                 strcpy(monitors[i].name, outputInfo->name);
                 monitors[i].width = crtcInfo->width;
                 monitors[i].height = crtcInfo->height;
@@ -128,8 +126,6 @@ extern void dm_list_monitors(Monitor *primary_monitor,
                 unsigned int crtc_height = crtcInfo->height;
 
                 if (screen_resources->outputs[i] == primaryOutput) {
-                    primary_monitor->name =
-                        malloc((strlen(outputInfo->name) + 1) * sizeof(char));
                     strcpy(primary_monitor->name, outputInfo->name);
 
                     primary_monitor->width = crtc_width;
@@ -138,8 +134,6 @@ extern void dm_list_monitors(Monitor *primary_monitor,
                 } else {
                     if (secondary_monitor->width < crtc_width ||
                         secondary_monitor->height < crtc_height) {
-                        secondary_monitor->name = malloc(
-                            (strlen(outputInfo->name) + 1) * sizeof(char));
                         strcpy(secondary_monitor->name, outputInfo->name);
                         secondary_monitor->width = crtc_width;
                         secondary_monitor->height = crtc_height;
@@ -187,8 +181,6 @@ extern Monitor *get_monitor(char *monitor_name) {
             crtcInfo =
                 XRRGetCrtcInfo(display, screen_resources, outputInfo->crtc);
             if (crtcInfo) {
-                monitor->name =
-                    malloc((strlen(monitor_name) + 1) * sizeof(char));
                 strcpy(monitor->name, monitor_name);
                 monitor->width = crtcInfo->width;
                 monitor->height = crtcInfo->height;

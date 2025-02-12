@@ -13,72 +13,74 @@ static char *get_config_file() {
 }
 
 static void free_monitor_background_pair(MonitorBackgroundPair *pair) {
-    if (pair) {
+    if (!pair) return; // Ensure it's not NULL
+    if (pair->name) {
         free(pair->name);
-        pair->name = NULL;
+        pair->name = NULL; // Avoid use-after-free
+    }
+    if (pair->image_path) {
         free(pair->image_path);
         pair->image_path = NULL;
     }
 }
 
 extern void free_config(Config *config) {
-    if (config) {
-        if (config->monitors_with_backgrounds) {
-            for (int i = 0; i < config->number_of_monitors; i++) {
-                free_monitor_background_pair(
-                    &config->monitors_with_backgrounds[i]);
-            }
-            free(config->monitors_with_backgrounds);
-        }
+    if (!config) return;
 
-        free(config);
+    if (config->monitors_with_backgrounds) {
+        for (int i = 0; i < config->number_of_monitors; i++) {
+            free_monitor_background_pair(&config->monitors_with_backgrounds[i]);
+        }
+        free(config->monitors_with_backgrounds);
+        config->monitors_with_backgrounds = NULL; // Prevent use-after-free
     }
+
+    free(config);
+    config = NULL; // Ensure we don't use the pointer again
 }
 
 static void get_xdg_pictures_dir(Config *config) {
     const char *xdg_pictures_dir =
         g_get_user_special_dir(G_USER_DIRECTORY_PICTURES);
-    strcpy(config->source_directory, xdg_pictures_dir);
-    printf("%s", config->source_directory);
+    if (!xdg_pictures_dir) {
+        xdg_pictures_dir = "";
+    }
+    snprintf(config->source_directory, sizeof(config->source_directory), "%s",
+             xdg_pictures_dir);
 }
 
 static void append_slash_path(Config *config) {
     size_t length = strlen(config->source_directory);
 
-    if (config->source_directory[length - 1] != '/') {
-        char *new_str = malloc(length + 2);
-        if (!new_str) {
-            return;
+    if (length + 1 < sizeof(config->source_directory)) {
+        if (config->source_directory[length - 1] != '/') {
+            strcat(config->source_directory, "/");
         }
-
-        strcpy(new_str, config->source_directory);
-        strcat(new_str, "/");
-
-        strcpy(config->source_directory, new_str);
     }
 }
 
-extern void update_source_directory(Config *config, char *new_src_dir) {
-    strcpy(config->source_directory, new_src_dir);
+extern void update_source_directory(Config *config, const char *new_src_dir) {
+    snprintf(config->source_directory, sizeof(config->source_directory), "%s",
+             new_src_dir);
 }
 
 extern Config *load_config() {
     FILE *file = fopen(get_config_file(), "r");
     Config *config = (Config *)malloc(sizeof(Config));
 
+    if (!config) {
+        perror("Memory allocation failed");
+        return NULL;
+    }
+
     config->monitors_with_backgrounds = NULL;
     config->number_of_monitors = 0;
+    config->source_directory[0] = '\0';
 
     if (file == NULL) {
         get_xdg_pictures_dir(config);
         append_slash_path(config);
         return config;
-    }
-
-    if (!config) {
-        perror("Memory allocation failed");
-        fclose(file);
-        return NULL;
     }
 
     size_t capacity = 255;
@@ -125,7 +127,8 @@ extern Config *load_config() {
     cJSON *directory_json =
         cJSON_GetObjectItemCaseSensitive(settings_json, "sourceDirectoryPath");
     if (cJSON_IsString(directory_json) && directory_json->valuestring) {
-        strcpy(config->source_directory, directory_json->valuestring);
+        snprintf(config->source_directory, sizeof(config->source_directory),
+                 "%s", directory_json->valuestring);
     } else {
         get_xdg_pictures_dir(config);
     }
@@ -141,6 +144,7 @@ extern Config *load_config() {
         MonitorBackgroundPair *temp =
             realloc(config->monitors_with_backgrounds,
                     (number_of_monitors + 1) * sizeof(MonitorBackgroundPair));
+
         if (!temp) {
             perror("Memory reallocation failed");
             cJSON_Delete(settings_json);
@@ -151,6 +155,7 @@ extern Config *load_config() {
 
         MonitorBackgroundPair *monitor_background_pair =
             &config->monitors_with_backgrounds[number_of_monitors];
+        memset(monitor_background_pair, 0, sizeof(MonitorBackgroundPair));
 
         cJSON *monitor_name_json =
             cJSON_GetObjectItemCaseSensitive(monitor_background_json, "name");
@@ -158,11 +163,20 @@ extern Config *load_config() {
             monitor_background_json, "imagePath");
 
         if (cJSON_IsString(monitor_name_json) &&
-            cJSON_IsString(background_json)) {
+            monitor_name_json->valuestring) {
             monitor_background_pair->name =
                 strdup(monitor_name_json->valuestring);
+        } else {
+            monitor_background_pair->name =
+                strdup(""); // Ensure non-null pointer
+        }
+
+        if (cJSON_IsString(background_json) && background_json->valuestring) {
             monitor_background_pair->image_path =
                 strdup(background_json->valuestring);
+        } else {
+            monitor_background_pair->image_path =
+                strdup(""); // Ensure non-null pointer
         }
 
         number_of_monitors++;

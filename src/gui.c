@@ -18,7 +18,6 @@
 #include "lightdm.h"
 #endif
 
-// Returns the Wallpaper pointer attached to the image widget.
 static Wallpaper *get_flow_child_wallpaper(GtkFlowBoxChild *flow_child) {
     GtkWidget *image = gtk_flow_box_child_get_child(flow_child);
     Wallpaper *wallpaper = g_object_get_data(G_OBJECT(image), "wallpaper");
@@ -30,6 +29,9 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
     Monitor *monitor = g_object_get_data(G_OBJECT(app), "selected_monitor");
 
     GList *flowbox_children = gtk_flow_box_get_selected_children(flowbox);
+
+    if (!flowbox_children) return;
+
     GtkFlowBoxChild *selected_children = flowbox_children->data;
 
     Wallpaper *wallpaper = get_flow_child_wallpaper(selected_children);
@@ -109,16 +111,44 @@ static gint sort_flow_images(GtkFlowBoxChild *child1, GtkFlowBoxChild *child2,
     return g_strcmp0(image_path1, image_path2);
 }
 
-static void show_images(GtkButton *button, GtkApplication *app) {
-    int image_width = 600;
+static void show_images_src_dir(GtkApplication *app) {
     int number_of_images;
-
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
     char *source_directory = config->source_directory;
+    GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
 
-    Wallpaper *wallpapers =
+    Wallpaper *old_wallpapers = g_object_get_data(G_OBJECT(app), "wallpapers");
+    if (old_wallpapers) {
+        free(old_wallpapers);
+        g_object_set_data(G_OBJECT(app), "wallpapers", NULL);
+    }
+
+    gtk_flow_box_remove_all(GTK_FLOW_BOX(flowbox));
+
+    Wallpaper *new_wallpapers =
         list_wallpapers(source_directory, &number_of_images);
 
+    if (new_wallpapers) {
+        gtk_flow_box_set_sort_func(GTK_FLOW_BOX(flowbox), NULL, NULL, NULL);
+        for (int i = 0; i < number_of_images; i++) {
+            GtkWidget *image = gtk_image_new_from_file(new_wallpapers[i].path);
+            gtk_flow_box_insert(GTK_FLOW_BOX(flowbox), image, -1);
+            gtk_widget_set_visible(image, true);
+            g_object_set_data(G_OBJECT(image), "wallpaper",
+                              (gpointer)&new_wallpapers[i]);
+        }
+
+        gtk_flow_box_set_sort_func(GTK_FLOW_BOX(flowbox), sort_flow_images,
+                                   NULL, NULL);
+
+        g_object_set_data(G_OBJECT(app), "wallpapers",
+                          (gpointer)new_wallpapers);
+    } else {
+        g_print("No images found in %s\n", source_directory);
+    }
+}
+
+static void show_images(GtkButton *button, GtkApplication *app) {
     Monitor *monitor = g_object_get_data(G_OBJECT(button), "monitor");
 
     GtkLabel *status_label =
@@ -138,41 +168,26 @@ static void show_images(GtkButton *button, GtkApplication *app) {
         g_object_set_data(G_OBJECT(app), "selected_monitor", NULL);
     }
 
-    if (g_object_get_data(G_OBJECT(app), "flowbox")) return;
+    if (!g_object_get_data(G_OBJECT(app), "flowbox")) {
+        GtkWidget *vbox = g_object_get_data(G_OBJECT(app), "vbox");
+        GtkWidget *scrolled_window = gtk_scrolled_window_new();
+        gtk_box_append(GTK_BOX(vbox), scrolled_window);
 
-    GtkWidget *vbox = g_object_get_data(G_OBJECT(app), "vbox");
-    GtkWidget *scrolled_window = gtk_scrolled_window_new();
-    gtk_box_append(GTK_BOX(vbox), scrolled_window);
+        GtkWidget *flowbox = gtk_flow_box_new();
+        gtk_widget_set_vexpand(GTK_WIDGET(flowbox), true);
+        g_object_set_data(G_OBJECT(app), "flowbox", flowbox);
+        gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), 10);
+        gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), 10);
+        gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window),
+                                      flowbox);
 
-    GtkWidget *flowbox = gtk_flow_box_new();
-    gtk_widget_set_vexpand(GTK_WIDGET(flowbox), true);
-    g_object_set_data(G_OBJECT(app), "flowbox", flowbox);
-    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), 10);
-    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), 10);
-    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window),
-                                  flowbox);
+        g_signal_connect(flowbox, "selected-children-changed",
+                         G_CALLBACK(image_selected), app);
 
-    g_signal_connect(flowbox, "selected-children-changed",
-                     G_CALLBACK(image_selected), app);
-
-    if (wallpapers) {
-        for (int i = 0; i < number_of_images; i++) {
-            GtkWidget *image = gtk_image_new_from_file(wallpapers[i].path);
-            gtk_flow_box_insert(GTK_FLOW_BOX(flowbox), image, -1);
-            gtk_widget_set_visible(image, true);
-            g_object_set_data(G_OBJECT(image), "wallpaper",
-                              (gpointer)&wallpapers[i]);
-        }
-
-        g_object_set_data(G_OBJECT(app), "wallpapers", (gpointer)wallpapers);
-    } else {
-        g_print("No images found in %s\n", source_directory);
+        gtk_widget_set_visible(scrolled_window, true);
+        gtk_widget_set_visible(flowbox, true);
+        show_images_src_dir(app);
     }
-
-    gtk_flow_box_set_sort_func(GTK_FLOW_BOX(flowbox), sort_flow_images, NULL,
-                               NULL);
-    gtk_widget_set_visible(scrolled_window, true);
-    gtk_widget_set_visible(flowbox, true);
 }
 
 static void wm_show_monitors(GtkButton *button, gpointer user_data) {
@@ -182,6 +197,9 @@ static void wm_show_monitors(GtkButton *button, gpointer user_data) {
     GtkBox *dm_monitors_box =
         g_object_get_data(G_OBJECT(app), "dm_monitors_box");
     gtk_widget_set_visible(GTK_WIDGET(dm_monitors_box), false);
+
+    GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
+    if (flowbox) gtk_flow_box_unselect_all(GTK_FLOW_BOX(flowbox));
 
     GtkBox *wm_monitors_box =
         g_object_get_data(G_OBJECT(app), "wm_monitors_box");
@@ -197,6 +215,9 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
     GtkBox *dm_monitors_box =
         g_object_get_data(G_OBJECT(app), "dm_monitors_box");
     gtk_widget_set_visible(GTK_WIDGET(dm_monitors_box), true);
+
+    GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
+    if (flowbox) gtk_flow_box_unselect_all(GTK_FLOW_BOX(flowbox));
 
     GtkBox *wm_monitors_box =
         g_object_get_data(G_OBJECT(app), "wm_monitors_box");
@@ -317,8 +338,7 @@ static void storage_dir_chosen(GObject *source_object, GAsyncResult *res,
 
     update_source_directory(config, new_src_dir);
     dump_config(config);
-    Config *new_config = load_config();
-    g_object_set_data(G_OBJECT(app), "configuration", (gpointer)new_config);
+    show_images_src_dir(app);
 }
 
 static void choose_source_dir(GtkWidget *button, gpointer user_data) {

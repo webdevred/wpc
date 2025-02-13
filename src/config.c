@@ -49,16 +49,6 @@ static void get_xdg_pictures_dir(Config *config) {
              xdg_pictures_dir);
 }
 
-static void append_slash_path(Config *config) {
-    size_t length = strlen(config->source_directory);
-
-    if (length + 1 < sizeof(config->source_directory)) {
-        if (config->source_directory[length - 1] != '/') {
-            strcat(config->source_directory, "/");
-        }
-    }
-}
-
 extern void update_source_directory(Config *config, const char *new_src_dir) {
     snprintf(config->source_directory, sizeof(config->source_directory), "%s",
              new_src_dir);
@@ -79,7 +69,6 @@ extern Config *load_config() {
 
     if (file == NULL) {
         get_xdg_pictures_dir(config);
-        append_slash_path(config);
         return config;
     }
 
@@ -132,8 +121,6 @@ extern Config *load_config() {
     } else {
         get_xdg_pictures_dir(config);
     }
-
-    append_slash_path(config);
 
     cJSON *monitors_json = cJSON_GetObjectItemCaseSensitive(
         settings_json, "monitorsWithBackgrounds");

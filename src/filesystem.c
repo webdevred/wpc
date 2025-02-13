@@ -15,6 +15,8 @@ extern Wallpaper *list_wallpapers(gchar *source_directory,
     DIR *dir;
     struct dirent *file;
 
+    unsigned int src_dir_len = strlen(source_directory);
+
     dir = opendir(source_directory);
     if (!dir) {
         return NULL;
@@ -35,8 +37,13 @@ extern Wallpaper *list_wallpapers(gchar *source_directory,
 
         Wallpaper *wallpaper = &wallpaper_array[wallpaper_array_size];
 
-        strcpy(wallpaper->path, source_directory);
-        strcat(wallpaper->path, filename);
+        if (source_directory[src_dir_len - 1] != '/') {
+            snprintf(wallpaper->path, sizeof(wallpaper->path), "%s%s%s",
+                     source_directory,
+                     (source_directory[src_dir_len - 1] != '/') ? "/" : "",
+                     filename);
+        }
+
         set_resolution(wallpaper);
         wallpaper_array_size++;
     }

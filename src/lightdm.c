@@ -18,8 +18,6 @@
 #include "resolution_scaling.h"
 #include "wpc.h"
 
-#define CONFIG_FILE "/etc/lightdm/slick-greeter.conf"
-
 static void format_dst_filename(gchar **dst_filename) {
     gchar *str = *dst_filename;
     int i = 0, j = 0;
@@ -175,7 +173,7 @@ static void spawn_process_and_handle_io(char **argv, const char *payload) {
 
 static void dump_payload(char **payload, const char *config_file_path,
                          const char *tmp_file_path, const char *dst_file_path,
-                         const bool primary_monitor) {
+                         const char *monitor_name) {
 
     cJSON *payload_json = cJSON_CreateObject();
 
@@ -194,8 +192,7 @@ static void dump_payload(char **payload, const char *config_file_path,
         goto end;
     }
 
-    cJSON_AddBoolToObject(payload_json, "updateForPrimaryMonitor",
-                          primary_monitor);
+    cJSON_AddStringToObject(payload_json, "monitorName", monitor_name);
     if (config_file_path == NULL) {
         goto end;
     }
@@ -229,7 +226,7 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
 
     char *payload = NULL;
     dump_payload(&payload, CONFIG_FILE, tmp_file_path, dst_file_path,
-                 monitor->primary);
+                 monitor->name);
 
     spawn_process_and_handle_io(argv, payload);
 

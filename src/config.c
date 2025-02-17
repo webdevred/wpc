@@ -13,10 +13,10 @@ static char *get_config_file() {
 }
 
 static void free_monitor_background_pair(MonitorBackgroundPair *pair) {
-    if (!pair) return; // Ensure it's not NULL
+    if (!pair) return;
     if (pair->name) {
         free(pair->name);
-        pair->name = NULL; // Avoid use-after-free
+        pair->name = NULL;
     }
     if (pair->image_path) {
         free(pair->image_path);
@@ -32,11 +32,11 @@ extern void free_config(Config *config) {
             free_monitor_background_pair(&config->monitors_with_backgrounds[i]);
         }
         free(config->monitors_with_backgrounds);
-        config->monitors_with_backgrounds = NULL; // Prevent use-after-free
+        config->monitors_with_backgrounds = NULL;
     }
 
     free(config);
-    config = NULL; // Ensure we don't use the pointer again
+    config = NULL;
 }
 
 static void get_xdg_pictures_dir(Config *config) {

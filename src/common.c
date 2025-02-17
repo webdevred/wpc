@@ -7,6 +7,8 @@
 #include "common.h"
 #include "wpc.h"
 
+#define MAX_LINE_LENGTH 1024
+
 extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr) {
     FILE *file = fopen(CONFIG_FILE, "r");
     if (file == NULL) {
@@ -15,11 +17,18 @@ extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr) {
     }
 
     int lines = 0;
-    char **config = NULL;
+    char **config = *config_ptr;
     char line[MAX_LINE_LENGTH];
 
+    if (config) {
+        for (int i = 0; i < *lines_ptr; i++) {
+            free(config[i]);
+        }
+        free(config);
+        config = NULL;
+    }
+
     while (fgets(line, sizeof(line), file)) {
-        // Strip newline character
         line[strcspn(line, "\n")] = '\0';
 
         char **temp = realloc(config, (lines + 1) * sizeof(char *));
@@ -48,6 +57,21 @@ extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr) {
     }
 
     fclose(file);
+
+    if (lines == 0) {
+        config = malloc(sizeof(char *));
+        if (config == NULL) {
+            perror("Error allocating memory for empty config");
+            return -1;
+        }
+        config[0] = strdup("");
+        if (config[0] == NULL) {
+            perror("Error allocating memory for empty line");
+            free(config);
+            return -1;
+        }
+        lines = 1;
+    }
 
     *config_ptr = config;
     *lines_ptr = lines;

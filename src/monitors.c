@@ -60,7 +60,7 @@ extern Monitor *wm_list_monitors(int *number_of_monitors) {
         if (outputInfo->connection == RR_Connected) {
             crtcInfo =
                 XRRGetCrtcInfo(display, screen_resources, outputInfo->crtc);
-            if (crtcInfo) {
+            if (crtcInfo->mode != None) {
                 (*number_of_monitors)++;
                 monitors =
                     realloc(monitors, *number_of_monitors * sizeof(Monitor));

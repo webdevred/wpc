@@ -4,7 +4,7 @@
 #include <X11/extensions/Xrandr.h>
 
 #define MAX_LINE_LENGTH 1024
-#define CONFIG_FILE "/etc/lightdm/slick-greeter.conf"
+#define CONFIG_FILE "/etc/lightdm/lightdm-gtk-greeter.conf"
 
 extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr);
 

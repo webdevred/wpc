@@ -14,7 +14,7 @@
 
 #define BUFFER_SIZE 1024
 
-static int create_storage_dir(char *file_path, mode_t mode) {
+static int create_storage_dir(const char *file_path, mode_t mode) {
     assert(file_path && *file_path);
     for (char *p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
@@ -29,8 +29,37 @@ static int create_storage_dir(char *file_path, mode_t mode) {
     return 0;
 }
 
-static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
-                          bool primary_monitor) {
+static bool is_this_line_monitor(char *line, const char *monitor_name) {
+    char *str = strdup(line);
+    bool found = false;
+    char *delimiter = strstr(str, ": ");
+    if (!delimiter) goto end;
+
+    *delimiter = '\0';
+    char *first_part = str;
+    char *second_part = delimiter + 2;
+
+    if (strcmp(first_part, "[monitor") != 0) {
+        goto end;
+    }
+
+    char *last_char = &second_part[strlen(second_part) - 1];
+    if (*last_char == ']') {
+        *last_char = '\0';
+    } else {
+        goto end;
+    }
+
+    if (strcmp(second_part, monitor_name) == 0) found = true;
+
+end:
+    free(str);
+    return found;
+}
+
+static int set_background(const char *scaled_wallpaper_path,
+                          const char *dst_wallpaper_path,
+                          const char *monitor_name) {
     char *storage_directory = dirname(strdup(dst_wallpaper_path));
     DIR *dir = opendir(storage_directory);
     if (dir) {
@@ -46,7 +75,12 @@ static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
 
     char **config = NULL;
     int lines = 0;
-    bool found = false;
+    bool found_monitor = false;
+    bool updating_monitor = false;
+
+    const char *bg_key = "background=";
+    const int bg_key_len = strlen(bg_key);
+
     if (lightdm_parse_config(&config, &lines) == 0) {
         FILE *file = fopen(CONFIG_FILE, "w");
         if (file == NULL) {
@@ -61,31 +95,30 @@ static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
 
         for (int i = 0; i < lines; i++) {
             char *line = config[i];
-            char *delimiter = strchr(line, '=');
 
-            if (delimiter) {
-                *delimiter = '\0';
-                char *key = line;
-                if (primary_monitor && strcmp(key, "background") == 0) {
-                    fprintf(file, "%s=%s\n", key, dst_wallpaper_path);
-                    found = true;
-                } else if (!primary_monitor &&
-                           strcmp(key, "other-monitors-logo") == 0) {
-                    fprintf(file, "%s=%s\n", key, dst_wallpaper_path);
-                    found = true;
+            if (strcmp(line, "") != 0) {
+                if (updating_monitor &&
+                    strncmp(bg_key, line, bg_key_len) == 0) {
+                    fprintf(file, "background=%s\n", dst_wallpaper_path);
                 } else {
-                    *delimiter = '=';
+                    if (is_this_line_monitor(line, monitor_name)) {
+                        updating_monitor = true;
+                        found_monitor = true;
+                    } else if (line[0] == '[') {
+                        updating_monitor = false;
+                    }
+
                     fprintf(file, "%s\n", line);
                 }
-            } else {
-                fprintf(file, "%s\n", line);
             }
             free(config[i]);
         }
+        fprintf(stderr, "%s %s\n", monitor_name, dst_wallpaper_path);
+        fflush(stderr);
 
-        if (!found) {
-            char *key = primary_monitor ? "background" : "other-monitors-logo";
-            fprintf(file, "%s=%s\n", key, dst_wallpaper_path);
+        if (!found_monitor) {
+            fprintf(file, "[monitor: %s]\nbackground=%s\n", monitor_name,
+                    dst_wallpaper_path);
         }
 
         free(config);
@@ -99,14 +132,14 @@ static int set_background(char *scaled_wallpaper_path, char *dst_wallpaper_path,
     return 0;
 }
 
-static bool load_config(const char *payload, char **config_file_path,
-                        char **tmp_file_path, char **dst_file_path,
-                        bool *primary_monitor) {
+static bool load_payload(const char *payload, char **config_file_path,
+                         char **tmp_file_path, char **dst_file_path,
+                         char **monitor_name) {
     cJSON *payload_json = cJSON_Parse(payload);
 
     if (!payload_json) {
         fprintf(stderr, "JSON parsing error\n");
-        return 1;
+        return true;
     }
 
     bool failed = false;
@@ -117,6 +150,7 @@ static bool load_config(const char *payload, char **config_file_path,
         config_file_path_json->valuestring) {
         *config_file_path = strdup(config_file_path_json->valuestring);
     } else {
+        fprintf(stderr, "Failed to parse configFilePath\n");
         failed = true;
     }
 
@@ -125,6 +159,7 @@ static bool load_config(const char *payload, char **config_file_path,
     if (cJSON_IsString(tmp_file_path_json) && tmp_file_path_json->valuestring) {
         *tmp_file_path = strdup(tmp_file_path_json->valuestring);
     } else {
+        fprintf(stderr, "Failed to parse tmpFilePath\n");
         failed = true;
     }
 
@@ -133,24 +168,34 @@ static bool load_config(const char *payload, char **config_file_path,
     if (cJSON_IsString(dst_file_path_json) && dst_file_path_json->valuestring) {
         *dst_file_path = strdup(dst_file_path_json->valuestring);
     } else {
+        fprintf(stderr, "Failed to parse dstFilePath\n");
         failed = true;
     }
 
-    cJSON *primary_monitor_json = cJSON_GetObjectItemCaseSensitive(
-        payload_json, "updateForPrimaryMonitor");
-    if (cJSON_IsString(primary_monitor_json) &&
-        primary_monitor_json->valuestring) {
-        *primary_monitor = strdup(primary_monitor_json->valuestring);
+    cJSON *monitor_name_json =
+        cJSON_GetObjectItemCaseSensitive(payload_json, "monitorName");
+    if (cJSON_IsString(monitor_name_json) && monitor_name_json->valuestring) {
+        *monitor_name = strdup(monitor_name_json->valuestring);
     } else {
+        fprintf(stderr, "Failed to parse monitorName\n");
         failed = true;
     }
 
     cJSON_Delete(payload_json);
-    return failed;
-}
 
-static void free_maybe(char *str) {
-    if (str) free(str);
+    // Free allocated memory if parsing failed
+    if (failed) {
+        free(*config_file_path);
+        free(*tmp_file_path);
+        free(*dst_file_path);
+        free(*monitor_name);
+        *config_file_path = NULL;
+        *tmp_file_path = NULL;
+        *dst_file_path = NULL;
+        *monitor_name = NULL;
+    }
+
+    return failed;
 }
 
 extern int main(int argc, char **argv) {
@@ -161,26 +206,27 @@ extern int main(int argc, char **argv) {
     char *config_file_path;
     char *tmp_wallpaper_path;
     char *dst_wallpaper_path;
-    bool monitor_primary;
+    char *monitor_name;
 
     int status = 1;
 
     count = read(STDIN_FILENO, buffer, sizeof(buffer) - 1);
-    if (count > 0) {
-        buffer[count] = '\0';
 
-        if (!load_config(buffer, &config_file_path, &tmp_wallpaper_path,
-                         &dst_wallpaper_path, &monitor_primary)) {
-            fprintf(stderr, "received invalid payload: %s\n", buffer);
-            return 1;
-        }
+    buffer[count] = '\0';
 
-        status = set_background(tmp_wallpaper_path, dst_wallpaper_path,
-                                monitor_primary);
+    load_payload(buffer, &config_file_path, &tmp_wallpaper_path,
+                 &dst_wallpaper_path, &monitor_name);
 
-        free_maybe(config_file_path);
-        free_maybe(tmp_wallpaper_path);
-        free_maybe(dst_wallpaper_path);
-    }
+    status =
+        set_background(tmp_wallpaper_path, dst_wallpaper_path, monitor_name);
+
+    fflush(stderr);
+
+    goto end;
+
+end:
+    free(config_file_path);
+    free(tmp_wallpaper_path);
+    free(dst_wallpaper_path);
     return status;
 }

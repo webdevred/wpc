@@ -8,7 +8,7 @@ typedef struct {
     unsigned int vertical_position;
     unsigned int horizontal_position;
     bool primary;
-    char name[32];
+    char *name;
 } Monitor;
 
 typedef struct {

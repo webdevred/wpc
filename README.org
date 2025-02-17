@@ -58,7 +58,13 @@ If you do not create a config file then source directory will be set to your pic
   - libgtk4-dev
   - libimlib2-dev
   - libcjson-dev
-  - libmagickwand-6-headers
+  - libmagickwand
+
+Install the requirements like this:
+
+#+begin_src bash
+  sudo apt update && sudo apt install -y libxrandr-dev libx11-dev libgtk4-dev libimlib2-dev libcjson-dev libmagickwand-dev
+#+end_src
 
 * License
 

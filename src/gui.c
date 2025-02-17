@@ -112,37 +112,37 @@ static gint sort_flow_images(GtkFlowBoxChild *child1, GtkFlowBoxChild *child2,
 }
 
 static void show_images_src_dir(GtkApplication *app) {
-    int number_of_images;
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
     char *source_directory = config->source_directory;
     GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
 
-    Wallpaper *old_wallpapers = g_object_get_data(G_OBJECT(app), "wallpapers");
-    if (old_wallpapers) {
-        free(old_wallpapers);
+    ArrayWrapper *old_wp_arr_wrapper =
+        g_object_get_data(G_OBJECT(app), "wallpapers");
+    if (old_wp_arr_wrapper) {
+        free_wallpapers(old_wp_arr_wrapper);
         g_object_set_data(G_OBJECT(app), "wallpapers", NULL);
     }
 
     gtk_flow_box_remove_all(GTK_FLOW_BOX(flowbox));
 
-    Wallpaper *new_wallpapers =
-        list_wallpapers(source_directory, &number_of_images);
+    ArrayWrapper *wp_arr_wrapper = list_wallpapers(source_directory);
+    Wallpaper *wallpapers = (Wallpaper *)wp_arr_wrapper->data;
 
-    if (new_wallpapers) {
+    if (wallpapers) {
         gtk_flow_box_set_sort_func(GTK_FLOW_BOX(flowbox), NULL, NULL, NULL);
-        for (int i = 0; i < number_of_images; i++) {
-            GtkWidget *image = gtk_image_new_from_file(new_wallpapers[i].path);
+        for (int i = 0; i < wp_arr_wrapper->amount_used; i++) {
+            GtkWidget *image = gtk_image_new_from_file(wallpapers[i].path);
             gtk_flow_box_insert(GTK_FLOW_BOX(flowbox), image, -1);
             gtk_widget_set_visible(image, true);
             g_object_set_data(G_OBJECT(image), "wallpaper",
-                              (gpointer)&new_wallpapers[i]);
+                              (gpointer)&wallpapers[i]);
         }
 
         gtk_flow_box_set_sort_func(GTK_FLOW_BOX(flowbox), sort_flow_images,
                                    NULL, NULL);
 
         g_object_set_data(G_OBJECT(app), "wallpapers",
-                          (gpointer)new_wallpapers);
+                          (gpointer)wp_arr_wrapper);
     } else {
         g_print("No images found in %s\n", source_directory);
     }
@@ -377,6 +377,7 @@ void free_dynamic_widgets(GtkApplication *app) {
     }
 }
 static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
+    (void)window;
     GtkApplication *app = GTK_APPLICATION(user_data);
 
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
@@ -391,9 +392,11 @@ static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
         g_object_set_data(G_OBJECT(app), "monitors", NULL);
     }
 
-    Wallpaper *wallpapers = g_object_get_data(G_OBJECT(app), "wallpapers");
-    if (wallpapers) {
-        free(wallpapers);
+    ArrayWrapper *wp_arr_wrapper =
+        g_object_get_data(G_OBJECT(app), "wallpapers");
+    if (wp_arr_wrapper) {
+        free_wallpapers(wp_arr_wrapper);
+
         g_object_set_data(G_OBJECT(app), "wallpapers", NULL);
     }
 

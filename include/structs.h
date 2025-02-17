@@ -1,5 +1,7 @@
 #pragma once
 
+#include "wpc.h"
+
 typedef struct {
     unsigned int width;
     unsigned int height;
@@ -10,7 +12,13 @@ typedef struct {
 } Monitor;
 
 typedef struct {
-    unsigned int width;
-    unsigned int height;
-    char path[4096];
+    ushort width;
+    ushort height;
+    char *path;
 } Wallpaper;
+
+typedef struct {
+  void *data;
+  ushort amount_allocated;
+  ushort amount_used;
+} ArrayWrapper;

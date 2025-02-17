@@ -11,7 +11,7 @@ typedef struct {
 typedef struct {
     int number_of_monitors;
     MonitorBackgroundPair *monitors_with_backgrounds;
-    char source_directory[4096];
+    char *source_directory;
 } Config;
 
 extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr);

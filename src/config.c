@@ -45,13 +45,14 @@ static void get_xdg_pictures_dir(Config *config) {
     if (!xdg_pictures_dir) {
         xdg_pictures_dir = "";
     }
-    snprintf(config->source_directory, sizeof(config->source_directory), "%s",
-             xdg_pictures_dir);
+    config->source_directory = strdup(xdg_pictures_dir);
 }
 
 extern void update_source_directory(Config *config, const char *new_src_dir) {
-    snprintf(config->source_directory, sizeof(config->source_directory), "%s",
-             new_src_dir);
+    free(config->source_directory);
+    ushort src_dir_len = strlen(new_src_dir);
+    config->source_directory = malloc(src_dir_len) + 1;
+    snprintf(config->source_directory, src_dir_len, "%s", new_src_dir);
 }
 
 extern Config *load_config() {
@@ -65,7 +66,6 @@ extern Config *load_config() {
 
     config->monitors_with_backgrounds = NULL;
     config->number_of_monitors = 0;
-    config->source_directory[0] = '\0';
 
     if (file == NULL) {
         get_xdg_pictures_dir(config);
@@ -116,8 +116,7 @@ extern Config *load_config() {
     cJSON *directory_json =
         cJSON_GetObjectItemCaseSensitive(settings_json, "sourceDirectoryPath");
     if (cJSON_IsString(directory_json) && directory_json->valuestring) {
-        snprintf(config->source_directory, sizeof(config->source_directory),
-                 "%s", directory_json->valuestring);
+        config->source_directory = strdup(directory_json->valuestring);
     } else {
         get_xdg_pictures_dir(config);
     }

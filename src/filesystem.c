@@ -8,19 +8,43 @@
 #include "imagemagick.h"
 #include "wpc.h"
 
-extern Wallpaper *list_wallpapers(gchar *source_directory,
-                                  int *number_of_images) {
-    Wallpaper *wallpaper_array = NULL;
-    int wallpaper_array_size = 0;
-    DIR *dir;
-    struct dirent *file;
+extern void free_wallpapers(ArrayWrapper *arr) {
+    Wallpaper *wallpapers = (Wallpaper *)arr->data;
+    for (int i = 0; i < arr->amount_used; i++) {
+        free(wallpapers[i].path);
+    }
+    free(wallpapers);
+    free(arr);
+}
 
-    unsigned int src_dir_len = strlen(source_directory);
-
-    dir = opendir(source_directory);
-    if (!dir) {
+extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
+    ArrayWrapper *array_wrapper = malloc(sizeof(ArrayWrapper));
+    if (!array_wrapper) {
         return NULL;
     }
+
+    array_wrapper->data = malloc(8 * sizeof(Wallpaper));
+    if (!array_wrapper->data) {
+        free(array_wrapper);
+        return NULL;
+    }
+
+    Wallpaper *wallpaper_array = (Wallpaper *)array_wrapper->data;
+    ushort amount_used = 0;
+    ushort amount_allocated = 8;
+
+    DIR *dir = opendir(source_directory);
+    if (!dir) {
+        free(array_wrapper->data);
+        free(array_wrapper);
+        return NULL;
+    }
+
+    ushort src_dir_len = strlen(source_directory);
+    bool slash_needed = source_directory[src_dir_len - 1] != '/';
+    src_dir_len += slash_needed ? 1 : 0;
+
+    struct dirent *file;
     while ((file = readdir(dir)) != NULL) {
         char *filename = file->d_name;
 
@@ -28,28 +52,42 @@ extern Wallpaper *list_wallpapers(gchar *source_directory,
             continue;
         }
 
-        wallpaper_array = realloc(wallpaper_array, (wallpaper_array_size + 1) *
-                                                       sizeof(Wallpaper));
-        if (!wallpaper_array) {
+        if (amount_used >= amount_allocated) {
+            amount_allocated += 8;
+            wallpaper_array = realloc(array_wrapper->data,
+                                      amount_allocated * sizeof(Wallpaper));
+            if (!wallpaper_array) {
+                free(array_wrapper->data);
+                free(array_wrapper);
+                closedir(dir);
+                return NULL;
+            }
+            array_wrapper->data = wallpaper_array;
+        }
+
+        Wallpaper *wallpaper = &wallpaper_array[amount_used];
+
+        ushort path_size = src_dir_len + strlen(filename) + 1;
+        wallpaper->path = malloc(path_size);
+        if (!wallpaper->path) {
+            free(array_wrapper->data);
+            free(array_wrapper);
             closedir(dir);
             return NULL;
         }
 
-        Wallpaper *wallpaper = &wallpaper_array[wallpaper_array_size];
-
-        if (source_directory[src_dir_len - 1] != '/') {
-            snprintf(wallpaper->path, sizeof(wallpaper->path), "%s%s%s",
-                     source_directory,
-                     (source_directory[src_dir_len - 1] != '/') ? "/" : "",
-                     filename);
-        }
+        snprintf(wallpaper->path, path_size, "%s%s%s", source_directory,
+                 slash_needed ? "/" : "", filename);
 
         set_resolution(wallpaper);
-        wallpaper_array_size++;
+
+        amount_used++;
     }
+
     closedir(dir);
 
-    *number_of_images = wallpaper_array_size;
+    array_wrapper->amount_allocated = amount_allocated;
+    array_wrapper->amount_used = amount_used;
 
-    return wallpaper_array;
+    return array_wrapper;
 }

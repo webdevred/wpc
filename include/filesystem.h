@@ -2,5 +2,6 @@
 
 #include "structs.h"
 
-extern Wallpaper *list_wallpapers(char *source_directory,
-                                  int *number_of_images);
+extern void free_wallpapers(ArrayWrapper *arr);
+
+extern ArrayWrapper *list_wallpapers(char *source_directory);

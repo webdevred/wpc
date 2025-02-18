@@ -130,7 +130,8 @@ static void show_images_src_dir(GtkApplication *app) {
 
     if (wallpapers) {
         gtk_flow_box_set_sort_func(GTK_FLOW_BOX(flowbox), NULL, NULL, NULL);
-        for (int i = 0; i < wp_arr_wrapper->amount_used; i++) {
+        unsigned int i;
+        for (i = 0; i < wp_arr_wrapper->amount_used; i++) {
             GtkWidget *image = gtk_image_new_from_file(wallpapers[i].path);
             gtk_flow_box_insert(GTK_FLOW_BOX(flowbox), image, -1);
             gtk_widget_set_visible(image, true);
@@ -190,13 +191,13 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     }
 }
 
-static void show_monitors(GtkApplication* app) {
+static void show_monitors(GtkApplication *app) {
     GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
     if (flowbox) gtk_flow_box_unselect_all(GTK_FLOW_BOX(flowbox));
 
-    GtkBox *monitors_box =
-        g_object_get_data(G_OBJECT(app), "monitors_box");
-    if(! gtk_widget_is_visible(GTK_WIDGET(monitors_box))) gtk_widget_set_visible(GTK_WIDGET(monitors_box), true);
+    GtkBox *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
+    if (!gtk_widget_is_visible(GTK_WIDGET(monitors_box)))
+        gtk_widget_set_visible(GTK_WIDGET(monitors_box), true);
 }
 
 static void wm_show_monitors(GtkButton *button, gpointer user_data) {
@@ -309,7 +310,8 @@ static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
         g_object_set_data(G_OBJECT(app), "configuration", NULL);
     }
 
-    ArrayWrapper *mon_arr_wrapper = g_object_get_data(G_OBJECT(app), "monitors");
+    ArrayWrapper *mon_arr_wrapper =
+        g_object_get_data(G_OBJECT(app), "monitors");
     if (mon_arr_wrapper) {
         free_monitors(mon_arr_wrapper);
         g_object_set_data(G_OBJECT(app), "monitors", NULL);
@@ -328,8 +330,7 @@ static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
     g_object_set_data(G_OBJECT(app), "status_selected_monitor", NULL);
     g_object_set_data(G_OBJECT(app), "vbox", NULL);
     g_object_set_data(G_OBJECT(app), "flowbox", NULL);
-    g_object_set_data(G_OBJECT(app), "wm_monitors_box", NULL);
-    g_object_set_data(G_OBJECT(app), "dm_monitors_box", NULL);
+    g_object_set_data(G_OBJECT(app), "monitors_box", NULL);
 
     free_dynamic_widgets(app);
 
@@ -360,7 +361,9 @@ static void activate(GtkApplication *app, gpointer user_data) {
     ArrayWrapper *mon_arr_wrapper = list_monitors();
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
 
-    for (int monitor_id = 0; monitor_id < mon_arr_wrapper->amount_used; monitor_id++) {
+    unsigned int monitor_id;
+    for (monitor_id = 0; monitor_id < mon_arr_wrapper->amount_used;
+         monitor_id++) {
         Monitor *monitor = &monitors[monitor_id];
 
         GtkWidget *button = gtk_button_new_with_label(g_strdup_printf(
@@ -373,8 +376,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
     }
 
     g_object_set_data(G_OBJECT(app), "monitors", (gpointer)mon_arr_wrapper);
-   
-    
+
     setup_wm_monitors_button(app, menu_box);
 #ifdef WPC_ENABLE_HELPER
     setup_dm_monitors_button(app, menu_box);

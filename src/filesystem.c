@@ -10,7 +10,8 @@
 
 extern void free_wallpapers(ArrayWrapper *arr) {
     Wallpaper *wallpapers = (Wallpaper *)arr->data;
-    for (int i = 0; i < arr->amount_used; i++) {
+    unsigned int i;
+    for (i = 0; i < arr->amount_used; i++) {
         free(wallpapers[i].path);
     }
     free(wallpapers);
@@ -79,7 +80,7 @@ extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
         snprintf(wallpaper->path, path_size, "%s%s%s", source_directory,
                  slash_needed ? "/" : "", filename);
 
-        set_resolution(wallpaper);
+        set_resolution(wallpaper->path, wallpaper);
 
         amount_used++;
     }

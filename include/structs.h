@@ -18,7 +18,7 @@ typedef struct {
 } Wallpaper;
 
 typedef struct {
-  void *data;
-  ushort amount_allocated;
-  ushort amount_used;
+    void *data;
+    unsigned int amount_allocated;
+    unsigned int amount_used;
 } ArrayWrapper;

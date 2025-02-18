@@ -113,8 +113,6 @@ static int set_background(const char *scaled_wallpaper_path,
             }
             free(config[i]);
         }
-        fprintf(stderr, "%s %s\n", monitor_name, dst_wallpaper_path);
-        fflush(stderr);
 
         if (!found_monitor) {
             fprintf(file, "[monitor: %s]\nbackground=%s\n", monitor_name,

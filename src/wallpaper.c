@@ -238,6 +238,11 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
         while (monitors < end) {
             Monitor *monitor = get_monitor(monitors->name);
 
+            if (monitor == NULL) {
+                monitors++;
+                continue;
+            }
+
             char *wallpaper_path = monitors->image_path;
             im = imlib_load_image(wallpaper_path);
 

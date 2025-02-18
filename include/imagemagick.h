@@ -1,4 +1,4 @@
 #pragma once
 #include "structs.h"
 
-int set_resolution(Wallpaper *wallpaper);
+extern int set_resolution(const char* wallpaper_path, Wallpaper *wallpaper);

@@ -1,12 +1,12 @@
 #include "structs.h"
 #include <wand/MagickWand.h>
 
-int set_resolution(Wallpaper *wallpaper) {
+extern int set_resolution(const char *wallpaper_path, Wallpaper *wallpaper) {
     MagickWandGenesis();
 
     MagickWand *wand = NewMagickWand();
 
-    if (MagickReadImage(wand, wallpaper->path) == MagickFalse) {
+    if (MagickReadImage(wand, wallpaper_path) == MagickFalse) {
         fprintf(stderr, "Failed to read image: %s\n", wallpaper->path);
         return 1;
     }

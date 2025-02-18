@@ -6,11 +6,8 @@
 
 extern void init_disp(Display **disp, Window *root);
 
-extern void get_screen_resources(Display **disp, Window *root,
-                                 XRRScreenResources **screen_resources);
-
 extern void free_monitors(ArrayWrapper *arr);
 
 extern ArrayWrapper *list_monitors();
 
-extern Monitor *get_monitor(char *monitor_name);
+extern Monitor *get_monitor(const char *monitor_name);

@@ -40,6 +40,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "config.h"
 #include "filesystem.h"
 #include "gib_imlib.h"
+#include "imagemagick.h"
 #include "wallpaper.h"
 #include "wpc.h"
 
@@ -151,9 +152,32 @@ static void feh_wm_set_bg_maxed(Pixmap pmap, Imlib_Image im, int x, int y,
     return;
 }
 
+static void set_default_backgroud(Monitor *monitor, Pixmap pmap, GC *gc) {
+    XGCValues gcval;
+    XColor color;
+    Colormap cmap = DefaultColormap(disp, DefaultScreen(disp));
+
+    XAllocNamedColor(disp, cmap, "black", &color, &color);
+    gcval.foreground = color.pixel;
+    *gc = XCreateGC(disp, root, GCForeground, &gcval);
+    XFillRectangle(disp, pmap, *gc, monitor->horizontal_position,
+                   monitor->vertical_position, monitor->width, monitor->height);
+}
+
+static bool is_image_bigger_than_monitor(Monitor *monitor,
+                                         char *wallpaper_path) {
+    Wallpaper *wallpaper = malloc(sizeof(Wallpaper));
+    set_resolution(wallpaper_path, wallpaper);
+    if (monitor->width > wallpaper->width ||
+        monitor->height > wallpaper->height) {
+        return false;
+    }
+    free(wallpaper);
+    return true;
+}
+
 static void feh_wm_set_bg(Config *config) {
     XGCValues gcvalues;
-    XGCValues gcval;
     GC gc;
 
     Atom prop_root, prop_esetroot, type;
@@ -166,11 +190,6 @@ static void feh_wm_set_bg(Config *config) {
     Display *disp2;
     Window root2;
     int depth2;
-
-    XColor color;
-    Colormap cmap = DefaultColormap(disp, DefaultScreen(disp));
-
-    XAllocNamedColor(disp, cmap, "black", &color, &color);
 
     pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
     ArrayWrapper *mon_arr_wrapper = list_monitors(true);
@@ -192,24 +211,31 @@ static void feh_wm_set_bg(Config *config) {
             }
         }
 
+        if (bg_mode == BG_MODE_CENTER &&
+            is_image_bigger_than_monitor(monitor, wallpaper_path)) {
+            bg_mode = BG_MODE_MAX;
+        }
+
         im = imlib_load_image(wallpaper_path);
 
         g_info("set filled bg: %s %s %d %d %d %d", monitor->name,
                wallpaper_path, monitor->width, monitor->height,
                monitor->horizontal_position, monitor->vertical_position);
-
         switch (bg_mode) {
         case BG_MODE_SCALE:
             feh_wm_set_bg_scaled(pmap_d1, im, monitor->horizontal_position,
                                  monitor->vertical_position, monitor->width,
                                  monitor->height);
             break;
+        case BG_MODE_MAX:
+            set_default_backgroud(monitor, pmap_d1, &gc);
+            feh_wm_set_bg_maxed(pmap_d1, im, monitor->horizontal_position,
+                                monitor->vertical_position, monitor->width,
+                                monitor->height);
+            XFreeGC(disp, gc);
+            break;
         case BG_MODE_CENTER:
-            pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
-            gcval.foreground = color.pixel;
-            gc = XCreateGC(disp, root, GCForeground, &gcval);
-            XFillRectangle(disp, pmap_d1, gc, 0, 0, scr->width, scr->height);
-
+            set_default_backgroud(monitor, pmap_d1, &gc);
             feh_wm_set_bg_centered(pmap_d1, im, monitor->horizontal_position,
                                    monitor->vertical_position, monitor->width,
                                    monitor->height);

@@ -39,6 +39,36 @@ extern void free_config(Config *config) {
     config = NULL;
 }
 
+const char *bg_mode_to_string(BgMode type) {
+    switch (type) {
+    case BG_MODE_TILE:
+        return "TILE";
+    case BG_MODE_CENTER:
+        return "CENTER";
+    case BG_MODE_SCALE:
+        return "SCALE";
+    case BG_MODE_MAX:
+        return "MAX";
+    case BG_MODE_FILL:
+        return "FILL";
+    default:
+        return "";
+    }
+}
+
+BgMode bg_mode_from_string(const char *str) {
+    if (strcmp(str, "TILE") == 0)
+        return BG_MODE_TILE;
+    else if (strcmp(str, "CENTER") == 0)
+        return BG_MODE_CENTER;
+    else if (strcmp(str, "SCALE") == 0)
+        return BG_MODE_SCALE;
+    else if (strcmp(str, "MAX") == 0)
+        return BG_MODE_MAX;
+    else
+        return BG_MODE_FILL;
+}
+
 static void get_xdg_pictures_dir(Config *config) {
     const char *xdg_pictures_dir =
         g_get_user_special_dir(G_USER_DIRECTORY_PICTURES);
@@ -147,22 +177,44 @@ extern Config *load_config() {
             cJSON_GetObjectItemCaseSensitive(monitor_background_json, "name");
         cJSON *background_json = cJSON_GetObjectItemCaseSensitive(
             monitor_background_json, "imagePath");
+        cJSON *bg_mode_json =
+            cJSON_GetObjectItemCaseSensitive(monitor_background_json, "bgMode");
 
-        if (cJSON_IsString(monitor_name_json) &&
-            monitor_name_json->valuestring) {
-            monitor_background_pair->name =
-                strdup(monitor_name_json->valuestring);
-        } else {
-            monitor_background_pair->name =
-                strdup(""); // Ensure non-null pointer
+        if (!cJSON_IsString(monitor_name_json) ||
+            !monitor_name_json->valuestring) {
+            fprintf(stderr, "Warning: Monitor name is missing or invalid, "
+                            "skipping this monitor.\n");
+            continue;
+        }
+        if (!cJSON_IsString(background_json) || !background_json->valuestring) {
+            fprintf(stderr, "Warning: Image path is missing or invalid, "
+                            "skipping this monitor.\n");
+            continue;
         }
 
-        if (cJSON_IsString(background_json) && background_json->valuestring) {
-            monitor_background_pair->image_path =
-                strdup(background_json->valuestring);
+        monitor_background_pair->name = strdup(monitor_name_json->valuestring);
+        if (!monitor_background_pair->name) {
+            perror("Memory allocation failed for monitor name");
+            cJSON_Delete(settings_json);
+            free_config(config);
+            return NULL;
+        }
+
+        monitor_background_pair->image_path =
+            strdup(background_json->valuestring);
+        if (!monitor_background_pair->image_path) {
+            perror("Memory allocation failed for image path");
+            free(monitor_background_pair->name);
+            cJSON_Delete(settings_json);
+            free_config(config);
+            return NULL;
+        }
+
+        if (cJSON_IsString(bg_mode_json)) {
+            monitor_background_pair->bg_mode =
+                bg_mode_from_string(bg_mode_json->valuestring);
         } else {
-            monitor_background_pair->image_path =
-                strdup(""); // Ensure non-null pointer
+            monitor_background_pair->bg_mode = BG_MODE_FILL;
         }
 
         number_of_monitors++;
@@ -200,6 +252,12 @@ extern void dump_config(Config *config) {
         cJSON *monitor_background_json = cJSON_CreateObject();
         MonitorBackgroundPair *monitor_background_pair =
             &config->monitors_with_backgrounds[i];
+
+        if (cJSON_AddStringToObject(
+                monitor_background_json, "bgMode",
+                bg_mode_to_string(monitor_background_pair->bg_mode)) == NULL) {
+            goto end;
+        }
 
         if (cJSON_AddStringToObject(monitor_background_json, "name",
                                     monitor_background_pair->name) == NULL) {

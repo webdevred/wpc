@@ -8,6 +8,6 @@ extern void init_disp(Display **disp, Window *root);
 
 extern void free_monitors(ArrayWrapper *arr);
 
-extern ArrayWrapper *list_monitors();
+extern ArrayWrapper *list_monitors(const bool virtual_monitors);
 
 extern Monitor *get_monitor(const char *monitor_name);

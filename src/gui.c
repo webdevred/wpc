@@ -198,6 +198,10 @@ static void show_monitors(GtkApplication *app) {
     GtkBox *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
     if (!gtk_widget_is_visible(GTK_WIDGET(monitors_box)))
         gtk_widget_set_visible(GTK_WIDGET(monitors_box), true);
+
+    GtkWidget *bg_mode_dropdown =
+        g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
+    gtk_widget_set_visible(GTK_WIDGET(bg_mode_dropdown), true);
 }
 
 static void wm_show_monitors(GtkButton *button, gpointer user_data) {
@@ -337,6 +341,45 @@ static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
     return FALSE;
 }
 
+const gchar *computer_type_to_string(BgMode type) {
+    switch (type) {
+    case BG_MODE_TILE:
+        return "Tile";
+    case BG_MODE_CENTER:
+        return "Center";
+    case BG_MODE_SCALE:
+        return "Scale";
+    case BG_MODE_MAX:
+        return "Max";
+    case BG_MODE_FILL:
+        return "Fill";
+    default:
+        return "";
+    }
+}
+
+// Callback for dropdown selection change
+static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
+                               gpointer user_data) {
+    (void)spec;
+    GtkApplication *app = GTK_APPLICATION(user_data);
+    Config *config = g_object_get_data(G_OBJECT(app), "configuration");
+    guint selected_index = gtk_drop_down_get_selected(dropdown);
+
+    BgMode bg_mode = selected_index;
+
+    MonitorBackgroundPair **monitor_bgs = &(config->monitors_with_backgrounds);
+    Monitor *monitor = g_object_get_data(G_OBJECT(app), "selected_monitor");
+    for (int i = 0; i < config->number_of_monitors; i++) {
+        if (strcmp((*monitor_bgs)[i].name, monitor->name) == 0) {
+            (*monitor_bgs)[i].bg_mode = bg_mode;
+        }
+    }
+
+    dump_config(config);
+    set_wallpapers();
+}
+
 static void activate(GtkApplication *app, gpointer user_data) {
     (void)user_data;
 
@@ -358,7 +401,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
     g_object_set_data(G_OBJECT(app), "monitors_box", monitors_box);
     gtk_widget_set_visible(GTK_WIDGET(monitors_box), false);
 
-    ArrayWrapper *mon_arr_wrapper = list_monitors();
+    ArrayWrapper *mon_arr_wrapper = list_monitors(true);
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
 
     unsigned int monitor_id;
@@ -386,6 +429,25 @@ static void activate(GtkApplication *app, gpointer user_data) {
     g_signal_connect(button_settings, "clicked", G_CALLBACK(choose_source_dir),
                      (gpointer)app);
     gtk_box_append(GTK_BOX(menu_box), button_settings);
+
+    GPtrArray *array;
+    GtkStringList *string_list;
+
+    array = g_ptr_array_new_with_free_func(g_free);
+    for (int i = 0; i < BG_MODE_LAST; i++) {
+        g_ptr_array_add(array, g_strdup(computer_type_to_string(i)));
+    }
+    g_ptr_array_add(array, NULL);
+    string_list = gtk_string_list_new(
+        (const gchar *const *)g_ptr_array_free(array, FALSE));
+
+    GtkWidget *dropdown = gtk_drop_down_new(G_LIST_MODEL(string_list), NULL);
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(dropdown), 0);
+    gtk_widget_set_visible(GTK_WIDGET(dropdown), false);
+    gtk_box_append(GTK_BOX(menu_box), dropdown);
+    g_signal_connect(dropdown, "notify::selected",
+                     G_CALLBACK(on_option_selected), (gpointer)app);
+    g_object_set_data(G_OBJECT(app), "bg_mode_dropdown", dropdown);
 
     GtkWidget *status_selected_monitor = gtk_label_new("");
     gtk_label_set_selectable(GTK_LABEL(status_selected_monitor), false);

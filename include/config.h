@@ -3,13 +3,23 @@
 #include "monitors.h"
 #include <glib.h>
 
+typedef enum {
+    BG_MODE_TILE = 0,
+    BG_MODE_CENTER,
+    BG_MODE_SCALE,
+    BG_MODE_FILL,
+    BG_MODE_MAX,
+    BG_MODE_LAST
+} BgMode;
+
 typedef struct {
     char *name;
     char *image_path;
+    BgMode bg_mode;
 } MonitorBackgroundPair;
 
 typedef struct {
-    int number_of_monitors;
+    ushort number_of_monitors;
     MonitorBackgroundPair *monitors_with_backgrounds;
     char *source_directory;
 } Config;

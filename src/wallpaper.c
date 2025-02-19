@@ -151,23 +151,10 @@ static void feh_wm_set_bg_maxed(Pixmap pmap, Imlib_Image im, int x, int y,
     return;
 }
 
-/*
-** Creates a script that can be used to create the same background
-** as the last time the program was called.
-*/
-
-static void feh_wm_set_bg(enum bgmode_type bgmode,
-                          MonitorBackgroundPair *monitors,
-                          int number_of_monitors) {
+static void feh_wm_set_bg(Config *config) {
     XGCValues gcvalues;
     XGCValues gcval;
     GC gc;
-
-    /*
-     * TODO this re-implements mkstemp (badly). However, it is only needed
-     * for non-file images and enlightenment. Might be easier to just remove
-     * it.
-     */
 
     Atom prop_root, prop_esetroot, type;
     int format;
@@ -176,7 +163,6 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
     Pixmap pmap_d1, pmap_d2;
     Imlib_Image im;
 
-    /* local display to set closedownmode on */
     Display *disp2;
     Window root2;
     int depth2;
@@ -186,80 +172,58 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
 
     XAllocNamedColor(disp, cmap, "black", &color, &color);
 
-    if (bgmode == BG_MODE_SCALE) {
-        pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
+    pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
+    ArrayWrapper *mon_arr_wrapper = list_monitors(true);
+    Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
+    unsigned int m;
+    MonitorBackgroundPair *monitor_bgs = config->monitors_with_backgrounds;
+    char *wallpaper_path;
+    BgMode bg_mode;
 
-#ifdef HAVE_LIBXINERAMA
-        if (opt.xinerama_index >= 0) {
+    for (m = 0; m < mon_arr_wrapper->amount_used; m++) {
+        ushort w;
+        Monitor *monitor = &monitors[m];
+
+        for (w = 0; w < config->number_of_monitors; w++) {
+            if (strcmp(monitor->name, monitor_bgs[w].name) == 0) {
+                wallpaper_path = monitor_bgs[w].image_path;
+                bg_mode = monitor_bgs[w].bg_mode;
+                break;
+            }
+        }
+
+        im = imlib_load_image(wallpaper_path);
+
+        g_info("set filled bg: %s %s %d %d %d %d", monitor->name,
+               wallpaper_path, monitor->width, monitor->height,
+               monitor->horizontal_position, monitor->vertical_position);
+
+        switch (bg_mode) {
+        case BG_MODE_SCALE:
+            feh_wm_set_bg_scaled(pmap_d1, im, monitor->horizontal_position,
+                                 monitor->vertical_position, monitor->width,
+                                 monitor->height);
+            break;
+        case BG_MODE_CENTER:
+            pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
             gcval.foreground = color.pixel;
             gc = XCreateGC(disp, root, GCForeground, &gcval);
             XFillRectangle(disp, pmap_d1, gc, 0, 0, scr->width, scr->height);
+
+            feh_wm_set_bg_centered(pmap_d1, im, monitor->horizontal_position,
+                                   monitor->vertical_position, monitor->width,
+                                   monitor->height);
             XFreeGC(disp, gc);
-        }
-
-        if (opt.xinerama && xinerama_screens) {
-            for (i = 0; i < num_xinerama_screens; i++) {
-                if (opt.xinerama_index < 0 || opt.xinerama_index == i) {
-                    feh_wm_set_bg_scaled(
-                        pmap_d1, im, use_filelist, xinerama_screens[i].x_org,
-                        xinerama_screens[i].y_org, xinerama_screens[i].width,
-                        xinerama_screens[i].height);
-                }
-            }
-        } else
-#endif /* HAVE_LIBXINERAMA */
-            feh_wm_set_bg_scaled(pmap_d1, im, 0, 0, scr->width, scr->height);
-    } else if (bgmode == BG_MODE_CENTER) {
-
-        pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
-        gcval.foreground = color.pixel;
-        gc = XCreateGC(disp, root, GCForeground, &gcval);
-        XFillRectangle(disp, pmap_d1, gc, 0, 0, scr->width, scr->height);
-
-#ifdef HAVE_LIBXINERAMA
-        if (opt.xinerama && xinerama_screens) {
-            for (i = 0; i < num_xinerama_screens; i++) {
-                if (opt.xinerama_index < 0 || opt.xinerama_index == i) {
-                    feh_wm_set_bg_centered(
-                        pmap_d1, im, use_filelist, xinerama_screens[i].x_org,
-                        xinerama_screens[i].y_org, xinerama_screens[i].width,
-                        xinerama_screens[i].height);
-                }
-            }
-        } else
-#endif /* HAVE_LIBXINERAMA */
-            feh_wm_set_bg_centered(pmap_d1, im, 0, 0, scr->width, scr->height);
-
-        XFreeGC(disp, gc);
-
-    } else if (bgmode == BG_MODE_FILL) {
-        pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
-        MonitorBackgroundPair *end = monitors + number_of_monitors;
-        while (monitors < end) {
-            Monitor *monitor = get_monitor(monitors->name);
-
-            if (monitor == NULL) {
-                monitors++;
-                continue;
-            }
-
-            char *wallpaper_path = monitors->image_path;
-            im = imlib_load_image(wallpaper_path);
-
-            logprintf(INFO, g_strdup_printf("set filled bg: %s %s %d %d %d %d",
-                                            monitor->name, wallpaper_path,
-                                            monitor->width, monitor->height,
-                                            monitor->horizontal_position,
-                                            monitor->vertical_position));
-
+            break;
+        default:
             feh_wm_set_bg_filled(pmap_d1, im, monitor->horizontal_position,
                                  monitor->vertical_position, monitor->width,
                                  monitor->height);
-
-            imlib_context_set_image(im);
-            imlib_free_image_and_decache();
-            monitors++;
+            break;
         }
+
+        imlib_context_set_image(im);
+        imlib_free_image_and_decache();
     }
 
     /* create new display, copy pixmap to new display */
@@ -326,8 +290,6 @@ static void feh_wm_set_bg(enum bgmode_type bgmode,
 extern void set_wallpapers() {
     init_x_and_imlib();
     Config *config = load_config();
-    MonitorBackgroundPair *monitors = config->monitors_with_backgrounds;
-    int number_of_monitors = config->number_of_monitors;
-    feh_wm_set_bg(BG_MODE_FILL, monitors, number_of_monitors);
+    feh_wm_set_bg(config);
     free_config(config);
 }

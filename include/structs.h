@@ -1,12 +1,11 @@
 #pragma once
 
 #include "wpc.h"
-
 typedef struct {
-    unsigned int width;
-    unsigned int height;
-    unsigned int vertical_position;
-    unsigned int horizontal_position;
+    ushort width;
+    ushort height;
+    ushort vertical_position;
+    ushort horizontal_position;
     bool primary;
     char *name;
 } Monitor;
@@ -19,6 +18,6 @@ typedef struct {
 
 typedef struct {
     void *data;
-    unsigned int amount_allocated;
-    unsigned int amount_used;
+    ushort amount_allocated;
+    ushort amount_used;
 } ArrayWrapper;

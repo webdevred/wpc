@@ -30,15 +30,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "config.h"
 #include "monitors.h"
 
-enum bgmode_type {
-    BG_MODE_NONE = 0,
-    BG_MODE_TILE,
-    BG_MODE_CENTER,
-    BG_MODE_SCALE,
-    BG_MODE_FILL,
-    BG_MODE_MAX
-};
-
 #define IPC_TIMEOUT ((char *)1)
 #define IPC_FAKE ((char *)2) /* Faked IPC */
 

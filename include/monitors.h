@@ -10,4 +10,4 @@ extern void free_monitors(ArrayWrapper *arr);
 
 extern ArrayWrapper *list_monitors(const bool virtual_monitors);
 
-extern Monitor *get_monitor(const char *monitor_name);
+extern Monitor *get_monitor(const gchar *monitor_name);

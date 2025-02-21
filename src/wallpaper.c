@@ -200,7 +200,7 @@ static void feh_wm_set_bg(Config *config) {
     BgMode bg_mode;
 
     for (m = 0; m < mon_arr_wrapper->amount_used; m++) {
-        ushort w;
+        gushort w;
         Monitor *monitor = &monitors[m];
 
         for (w = 0; w < config->number_of_monitors; w++) {
@@ -254,7 +254,7 @@ static void feh_wm_set_bg(Config *config) {
 
     /* create new display, copy pixmap to new display */
     disp2 = XOpenDisplay(NULL);
-    if (!disp2) logprintf(ERROR, "Can't reopen X display.");
+    if (!disp2) g_error("Can't reopen X display.");
     root2 = RootWindow(disp2, DefaultScreen(disp2));
     depth2 = DefaultDepth(disp2, DefaultScreen(disp2));
     XSync(disp, False);
@@ -297,7 +297,7 @@ static void feh_wm_set_bg(Config *config) {
     prop_esetroot = XInternAtom(disp2, "ESETROOT_PMAP_ID", False);
 
     if (prop_root == None || prop_esetroot == None)
-        logprintf(ERROR, "creation of pixmap property failed.");
+        g_error("creation of pixmap property failed.");
 
     XChangeProperty(disp2, root2, prop_root, XA_PIXMAP, 32, PropModeReplace,
                     (unsigned char *)&pmap_d2, 1);

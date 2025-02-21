@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 #include "config.h"
-#include "logging.h"
 
 #include "filesystem.h"
 #include "gui.h"
@@ -38,9 +37,8 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 
     Wallpaper *wallpaper = get_flow_child_wallpaper(selected_children);
 
-    logprintf(INFO, g_strdup_printf("Clicked image %s Selected monitor: %dx%d",
-                                    wallpaper->path, monitor->width,
-                                    monitor->height));
+    g_info("Clicked image %s Selected monitor: %dx%d", wallpaper->path,
+           monitor->width, monitor->height);
 
 #ifdef WPC_ENABLE_HELPER
     GtkButton *button_menu_choice =
@@ -66,7 +64,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 
         bool found = false;
 
-        logprintf(INFO, "trying to update monitor in existing configuration");
+        g_info("trying to update monitor in existing configuration");
         for (int i = 0; i < number_of_monitors; i++) {
             if (monitors[i].name &&
                 strcmp(monitors[i].name, monitor_name) == 0) {
@@ -208,7 +206,7 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
     if (menu_choice) {
         if (*menu_choice == WM_BACKGROUND && monitor) {
-            for (ushort i = 0; i < config->number_of_monitors; i++) {
+            for (gushort i = 0; i < config->number_of_monitors; i++) {
                 MonitorBackgroundPair *monitor_bg =
                     &(config->monitors_with_backgrounds[i]);
                 if (strcmp(monitor_bg->name, monitor->name) == 0) {

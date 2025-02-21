@@ -13,22 +13,22 @@ typedef enum {
 } BgMode;
 
 typedef struct {
-    char *name;
-    char *image_path;
+    gchar *name;
+    gchar *image_path;
     BgMode bg_mode;
 } MonitorBackgroundPair;
 
 typedef struct {
-    ushort number_of_monitors;
+    gushort number_of_monitors;
     MonitorBackgroundPair *monitors_with_backgrounds;
-    char *source_directory;
+    gchar *source_directory;
 } Config;
 
 extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr);
 
 extern void free_config(Config *config);
 
-extern void update_source_directory(Config *config, const char *new_src_dir);
+extern void update_source_directory(Config *config, const gchar *new_src_dir);
 
 extern Config *load_config(void);
 

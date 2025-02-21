@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "common.h"
-#include "wpc.h"
 
 #define MAX_LINE_LENGTH 1024
 

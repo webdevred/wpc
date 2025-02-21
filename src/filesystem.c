@@ -31,8 +31,8 @@ extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
     }
 
     Wallpaper *wallpaper_array = (Wallpaper *)array_wrapper->data;
-    ushort amount_used = 0;
-    ushort amount_allocated = 8;
+    gushort amount_used = 0;
+    gushort amount_allocated = 8;
 
     DIR *dir = opendir(source_directory);
     if (!dir) {
@@ -41,13 +41,13 @@ extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
         return NULL;
     }
 
-    ushort src_dir_len = strlen(source_directory);
+    gushort src_dir_len = strlen(source_directory);
     bool slash_needed = source_directory[src_dir_len - 1] != '/';
     src_dir_len += slash_needed ? 1 : 0;
 
     struct dirent *file;
     while ((file = readdir(dir)) != NULL) {
-        char *filename = file->d_name;
+        gchar *filename = file->d_name;
 
         if (strcmp(filename, ".") == 0 || strcmp(filename, "..") == 0) {
             continue;
@@ -68,7 +68,7 @@ extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
 
         Wallpaper *wallpaper = &wallpaper_array[amount_used];
 
-        ushort path_size = src_dir_len + strlen(filename) + 1;
+        gushort path_size = src_dir_len + strlen(filename) + 1;
         wallpaper->path = malloc(path_size);
         if (!wallpaper->path) {
             free(array_wrapper->data);

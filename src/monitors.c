@@ -74,12 +74,12 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
             monitors[i].primary = x_monitors[i].primary;
         }
 
-        array_wrapper->amount_allocated = (ushort)amount_used;
-        array_wrapper->amount_used = (ushort)amount_used;
+        array_wrapper->amount_allocated = (gushort)amount_used;
+        array_wrapper->amount_used = (gushort)amount_used;
     } else {
         Monitor *monitors = (Monitor *)array_wrapper->data;
-        ushort amount_used = 0;
-        ushort amount_allocated = 0;
+        gushort amount_used = 0;
+        gushort amount_allocated = 0;
         XRRScreenResources *screen_resources;
 
         get_screen_resources(&display, &root, &screen_resources);

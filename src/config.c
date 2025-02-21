@@ -7,7 +7,7 @@
 
 #define CONFIG_FILE ".config/wpc/settings.json"
 
-static char *get_config_file() {
+static gchar *get_config_file() {
     const gchar *home = g_get_home_dir();
     return g_strdup_printf("%s/%s", home, CONFIG_FILE);
 }
@@ -39,7 +39,7 @@ extern void free_config(Config *config) {
     config = NULL;
 }
 
-const char *bg_mode_to_string(BgMode type) {
+const gchar *bg_mode_to_string(BgMode type) {
     switch (type) {
     case BG_MODE_TILE:
         return "TILE";
@@ -56,7 +56,7 @@ const char *bg_mode_to_string(BgMode type) {
     }
 }
 
-BgMode bg_mode_from_string(const char *str) {
+BgMode bg_mode_from_string(const gchar *str) {
     if (strcmp(str, "TILE") == 0)
         return BG_MODE_TILE;
     else if (strcmp(str, "CENTER") == 0)
@@ -70,7 +70,7 @@ BgMode bg_mode_from_string(const char *str) {
 }
 
 static void get_xdg_pictures_dir(Config *config) {
-    const char *xdg_pictures_dir =
+    const gchar *xdg_pictures_dir =
         g_get_user_special_dir(G_USER_DIRECTORY_PICTURES);
     if (!xdg_pictures_dir) {
         xdg_pictures_dir = "";
@@ -78,9 +78,9 @@ static void get_xdg_pictures_dir(Config *config) {
     config->source_directory = strdup(xdg_pictures_dir);
 }
 
-extern void update_source_directory(Config *config, const char *new_src_dir) {
+extern void update_source_directory(Config *config, const gchar *new_src_dir) {
     free(config->source_directory);
-    ushort src_dir_len = strlen(new_src_dir);
+    gushort src_dir_len = strlen(new_src_dir);
     config->source_directory = malloc(src_dir_len) + 1;
     snprintf(config->source_directory, src_dir_len, "%s", new_src_dir);
 }
@@ -103,7 +103,7 @@ extern Config *load_config() {
     }
 
     size_t capacity = 255;
-    char *file_content = malloc(capacity);
+    gchar *file_content = malloc(capacity);
     if (!file_content) {
         perror("Memory allocation failed");
         free(config);
@@ -113,13 +113,13 @@ extern Config *load_config() {
     file_content[0] = '\0';
 
     size_t file_size = 0;
-    char line[100];
+    gchar line[100];
 
     while (fgets(line, sizeof(line), file)) {
         size_t line_len = strlen(line);
         if (file_size + line_len + 1 > capacity) {
             capacity *= 2;
-            char *temp = realloc(file_content, capacity);
+            gchar *temp = realloc(file_content, capacity);
             if (!temp) {
                 perror("Memory reallocation failed");
                 free(file_content);
@@ -231,7 +231,7 @@ extern void dump_config(Config *config) {
         perror("Error opening configuration file");
         exit(1);
     }
-    char *string = NULL;
+    gchar *string = NULL;
     cJSON *monitors_with_backgrounds = NULL;
 
     cJSON *settings = cJSON_CreateObject();

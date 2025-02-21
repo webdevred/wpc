@@ -106,7 +106,7 @@ static gboolean stdout_callback(GIOChannel *source, GIOCondition condition,
     if (g_io_channel_read_line(source, &line, NULL, NULL, &error) ==
             G_IO_STATUS_NORMAL &&
         line) {
-        logprintf(INFO, line);
+        g_info("%s", line);
         g_free(line);
         return TRUE;
     }
@@ -219,7 +219,7 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
     if (scale_image(wallpaper, tmp_file_path, monitor) != 0) {
         fflush(stderr);
         g_free(tmp_file_path);
-        logprintf(ERROR, "Failed to scale image");
+        g_error("Failed to scale image");
     }
 
     gchar *argv[] = {WPC_HELPER_PATH, NULL};

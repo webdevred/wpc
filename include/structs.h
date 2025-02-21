@@ -1,23 +1,24 @@
 #pragma once
-
 #include "wpc.h"
+#include <glib.h>
 typedef struct {
-    ushort width;
-    ushort height;
-    ushort vertical_position;
-    ushort horizontal_position;
+    gushort width;
+    gushort height;
+    gushort vertical_position;
+    gushort horizontal_position;
     bool primary;
-    char *name;
+    gchar *name;
 } Monitor;
 
 typedef struct {
-    ushort width;
-    ushort height;
-    char *path;
+    gushort width;
+    gushort height;
+    gchar *path;
 } Wallpaper;
 
 typedef struct {
     void *data;
-    ushort amount_allocated;
-    ushort amount_used;
+    gushort amount_allocated;
+    gushort amount_used;
 } ArrayWrapper;
+

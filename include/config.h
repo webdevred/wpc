@@ -4,12 +4,12 @@
 #include <glib.h>
 
 typedef enum {
-    BG_MODE_TILE = 0,
-    BG_MODE_CENTER,
-    BG_MODE_SCALE,
+    BG_MODE_CENTER = 1,
     BG_MODE_FILL,
     BG_MODE_MAX,
-    BG_MODE_LAST
+    BG_MODE_SCALE,
+    BG_MODE_TILE,
+    BG_MODE_NOT_SET
 } BgMode;
 
 typedef struct {

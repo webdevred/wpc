@@ -18,6 +18,8 @@
 #include "lightdm.h"
 #endif
 
+typedef enum { DM_BACKGROUND = 0, WM_BACKGROUND } AppTab;
+
 static Wallpaper *get_flow_child_wallpaper(GtkFlowBoxChild *flow_child) {
     GtkWidget *image = gtk_flow_box_child_get_child(flow_child);
     Wallpaper *wallpaper = g_object_get_data(G_OBJECT(image), "wallpaper");
@@ -44,10 +46,10 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
     GtkButton *button_menu_choice =
         g_object_get_data(G_OBJECT(app), "menu_choice");
 
-    gchar *menu_choice =
+    AppTab *menu_choice =
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
 
-    if (g_strcmp0(menu_choice, "dm_background") == 0) {
+    if (*menu_choice == DM_BACKGROUND) {
         lightdm_set_background(wallpaper, monitor);
     } else {
 #endif
@@ -149,6 +151,37 @@ static void show_images_src_dir(GtkApplication *app) {
     }
 }
 
+static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
+                               gpointer user_data) {
+    (void)spec;
+    GtkApplication *app = GTK_APPLICATION(user_data);
+    Config *config = g_object_get_data(G_OBJECT(app), "configuration");
+    guint selected_index = gtk_drop_down_get_selected(dropdown);
+
+    BgMode bg_mode = selected_index;
+
+    GtkButton *button_menu_choice =
+        g_object_get_data(G_OBJECT(app), "menu_choice");
+
+    AppTab *menu_choice =
+        g_object_get_data(G_OBJECT(button_menu_choice), "name");
+
+    if (*menu_choice == WM_BACKGROUND) {
+        MonitorBackgroundPair **monitor_bgs =
+            &(config->monitors_with_backgrounds);
+        Monitor *monitor = g_object_get_data(G_OBJECT(app), "selected_monitor");
+        if (!monitor && selected_index == BG_MODE_NOT_SET) return;
+        for (int i = 0; i < config->number_of_monitors; i++) {
+            if (strcmp((*monitor_bgs)[i].name, monitor->name) == 0) {
+                (*monitor_bgs)[i].bg_mode = bg_mode;
+            }
+        }
+
+        dump_config(config);
+        set_wallpapers();
+    }
+}
+
 static void show_images(GtkButton *button, GtkApplication *app) {
     Monitor *monitor = g_object_get_data(G_OBJECT(button), "monitor");
 
@@ -163,11 +196,35 @@ static void show_images(GtkButton *button, GtkApplication *app) {
 
     gtk_label_set_label(status_label, status);
 
+    GtkWidget *bg_mode_dropdown =
+        g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
+    gtk_widget_set_visible(GTK_WIDGET(bg_mode_dropdown), true);
+
+    BgMode bg_mode = BG_MODE_NOT_SET;
+
+    AppTab *menu_choice =
+        g_object_get_data(G_OBJECT(button_menu_choice), "name");
+
+    Config *config = g_object_get_data(G_OBJECT(app), "configuration");
+    if (menu_choice) {
+        if (*menu_choice == WM_BACKGROUND && monitor) {
+            for (ushort i = 0; i < config->number_of_monitors; i++) {
+                MonitorBackgroundPair *monitor_bg =
+                    &(config->monitors_with_backgrounds[i]);
+                if (strcmp(monitor_bg->name, monitor->name) == 0) {
+                    bg_mode = monitor_bg->bg_mode;
+                }
+            }
+        }
+    }
+
     if (monitor) {
         g_object_set_data(G_OBJECT(app), "selected_monitor", (gpointer)monitor);
     } else {
         g_object_set_data(G_OBJECT(app), "selected_monitor", NULL);
     }
+
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(bg_mode_dropdown), (guint)bg_mode);
 
     if (!g_object_get_data(G_OBJECT(app), "flowbox")) {
         GtkWidget *vbox = g_object_get_data(G_OBJECT(app), "vbox");
@@ -198,10 +255,6 @@ static void show_monitors(GtkApplication *app) {
     GtkBox *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
     if (!gtk_widget_is_visible(GTK_WIDGET(monitors_box)))
         gtk_widget_set_visible(GTK_WIDGET(monitors_box), true);
-
-    GtkWidget *bg_mode_dropdown =
-        g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
-    gtk_widget_set_visible(GTK_WIDGET(bg_mode_dropdown), true);
 }
 
 static void wm_show_monitors(GtkButton *button, gpointer user_data) {
@@ -225,8 +278,10 @@ static void dm_show_monitors(GtkButton *button, gpointer user_data) {
 void setup_dm_monitors_button(GtkApplication *app, GtkWidget *menu_box) {
     GtkWidget *button_dm_show_monitors =
         gtk_button_new_with_label("Lock screen background");
-    g_object_set_data(G_OBJECT(button_dm_show_monitors), "name",
-                      "dm_background");
+    AppTab *app_tab = malloc(sizeof(app_tab));
+    *app_tab = DM_BACKGROUND;
+    g_object_set_data_full(G_OBJECT(button_dm_show_monitors), "name",
+                           (gpointer)app_tab, g_free);
     g_signal_connect(button_dm_show_monitors, "clicked",
                      G_CALLBACK(dm_show_monitors), (gpointer)app);
     gtk_box_append(GTK_BOX(menu_box), button_dm_show_monitors);
@@ -236,8 +291,10 @@ void setup_dm_monitors_button(GtkApplication *app, GtkWidget *menu_box) {
 void setup_wm_monitors_button(GtkApplication *app, GtkWidget *menu_box) {
     GtkWidget *button_wm_show_monitors =
         gtk_button_new_with_label("Desktop background");
-    g_object_set_data(G_OBJECT(button_wm_show_monitors), "name",
-                      "wm_background");
+    AppTab *app_tab = malloc(sizeof(app_tab));
+    *app_tab = WM_BACKGROUND;
+    g_object_set_data_full(G_OBJECT(button_wm_show_monitors), "name",
+                           (gpointer)app_tab, g_free);
     g_signal_connect(button_wm_show_monitors, "clicked",
                      G_CALLBACK(wm_show_monitors), (gpointer)app);
     gtk_box_append(GTK_BOX(menu_box), button_wm_show_monitors);
@@ -341,7 +398,7 @@ static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
     return FALSE;
 }
 
-const gchar *computer_type_to_string(BgMode type) {
+const gchar *bg_mode_to_display_string(BgMode type) {
     switch (type) {
     case BG_MODE_TILE:
         return "Tile";
@@ -354,30 +411,8 @@ const gchar *computer_type_to_string(BgMode type) {
     case BG_MODE_FILL:
         return "Fill";
     default:
-        return "";
+        return "(Not set)";
     }
-}
-
-// Callback for dropdown selection change
-static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
-                               gpointer user_data) {
-    (void)spec;
-    GtkApplication *app = GTK_APPLICATION(user_data);
-    Config *config = g_object_get_data(G_OBJECT(app), "configuration");
-    guint selected_index = gtk_drop_down_get_selected(dropdown);
-
-    BgMode bg_mode = selected_index;
-
-    MonitorBackgroundPair **monitor_bgs = &(config->monitors_with_backgrounds);
-    Monitor *monitor = g_object_get_data(G_OBJECT(app), "selected_monitor");
-    for (int i = 0; i < config->number_of_monitors; i++) {
-        if (strcmp((*monitor_bgs)[i].name, monitor->name) == 0) {
-            (*monitor_bgs)[i].bg_mode = bg_mode;
-        }
-    }
-
-    dump_config(config);
-    set_wallpapers();
 }
 
 static void activate(GtkApplication *app, gpointer user_data) {
@@ -434,8 +469,9 @@ static void activate(GtkApplication *app, gpointer user_data) {
     GtkStringList *string_list;
 
     array = g_ptr_array_new_with_free_func(g_free);
-    for (int i = 0; i < BG_MODE_LAST; i++) {
-        g_ptr_array_add(array, g_strdup(computer_type_to_string(i)));
+    for (int i = 0; i < BG_MODE_NOT_SET; i++) {
+        int i2 = i == 0 ? BG_MODE_NOT_SET : i;
+        g_ptr_array_add(array, g_strdup(bg_mode_to_display_string(i2)));
     }
     g_ptr_array_add(array, NULL);
     string_list = gtk_string_list_new(

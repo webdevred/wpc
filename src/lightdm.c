@@ -77,7 +77,7 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path,
 
     int aspect_image_height =
         scale_height(src_image->width, src_image->height, monitor->width);
-    int vertical_offset = (int)((aspect_image_height - monitor->height) / 2);
+    int vertical_offset = (aspect_image_height - monitor->height) >> 1;
 
     if (vertical_offset < 0) vertical_offset = 0;
 

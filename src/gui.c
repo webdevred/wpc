@@ -45,7 +45,11 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
 
     if (*menu_choice == DM_BACKGROUND) {
-        lightdm_set_background(wallpaper, monitor);
+        GtkWidget *bg_mode_dropdown =
+            g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
+        guint selected_index =
+            gtk_drop_down_get_selected(GTK_DROP_DOWN(bg_mode_dropdown));
+        lightdm_set_background(wallpaper, monitor, selected_index);
     } else {
 #endif
         Config *config = g_object_get_data(G_OBJECT(app), "configuration");
@@ -113,6 +117,8 @@ static void show_images_src_dir(GtkApplication *app) {
     char *source_directory = config->source_directory;
     GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
 
+    if (!flowbox) return;
+
     ArrayWrapper *old_wp_arr_wrapper =
         g_object_get_data(G_OBJECT(app), "wallpapers");
     if (old_wp_arr_wrapper) {
@@ -161,10 +167,11 @@ static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
     AppTab *menu_choice =
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
 
+    Monitor *monitor = g_object_get_data(G_OBJECT(app), "selected_monitor");
+
     if (*menu_choice == WM_BACKGROUND) {
         MonitorBackgroundPair **monitor_bgs =
             &(config->monitors_with_backgrounds);
-        Monitor *monitor = g_object_get_data(G_OBJECT(app), "selected_monitor");
         if (!monitor && selected_index == BG_MODE_NOT_SET) return;
         for (int i = 0; i < config->number_of_monitors; i++) {
             if (strcmp((*monitor_bgs)[i].name, monitor->name) == 0) {
@@ -174,6 +181,12 @@ static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
 
         dump_config(config);
         set_wallpapers();
+    } else {
+        GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
+        GList *flowbox_children =
+            gtk_flow_box_get_selected_children(GTK_FLOW_BOX(flowbox));
+        Wallpaper *wallpaper = get_flow_child_wallpaper(flowbox_children->data);
+        lightdm_set_background(wallpaper, monitor, selected_index);
     }
 }
 
@@ -208,6 +221,7 @@ static void show_images(GtkButton *button, GtkApplication *app) {
                     &(config->monitors_with_backgrounds[i]);
                 if (strcmp(monitor_bg->name, monitor->name) == 0) {
                     bg_mode = monitor_bg->bg_mode;
+                    break;
                 }
             }
         }

@@ -6,12 +6,13 @@
 #include <sys/prctl.h>
 #include <unistd.h>
 #include <wand/MagickWand.h>
+#include <wand/magick-image.h>
 
 #define DM_CONFIG_PAYLOAD
 #include "common.h"
 #include "config.h"
 #include "lightdm.h"
-#include "resolution_scaling.h"
+#include "rendering_region.h"
 
 static void format_dst_filename(gchar **dst_filename) {
     gchar *str = *dst_filename;
@@ -47,13 +48,11 @@ static void format_dst_filename(gchar **dst_filename) {
 }
 
 static int scale_image(Wallpaper *src_image, char *dst_image_path,
-                       Monitor *monitor) {
+                       Monitor monitor, BgMode bg_mode) {
 #define ThrowWandException(wand)                                               \
     {                                                                          \
         char *description;                                                     \
-                                                                               \
         ExceptionType severity;                                                \
-                                                                               \
         description = MagickGetException(wand, &severity);                     \
         (void)fprintf(stderr, "%s %s %lu %s\n", GetMagickModule(),             \
                       description);                                            \
@@ -61,34 +60,54 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path,
         exit(-1);                                                              \
     }
 
+    MagickWand *wallpaper_wand = NULL;
+    PixelWand *color = NULL;
+    MagickWand *output_wand = NULL;
     MagickBooleanType status;
 
-    MagickWand *magick_wand;
-
     MagickWandGenesis();
-    magick_wand = NewMagickWand();
-    status = MagickReadImage(magick_wand, src_image->path);
-    if (status == MagickFalse) ThrowWandException(magick_wand);
 
-    int aspect_image_height =
-        scale_height(src_image->width, src_image->height, monitor->width);
-    int vertical_offset = (aspect_image_height - monitor->height) >> 1;
+    wallpaper_wand = NewMagickWand();
+    status = MagickReadImage(wallpaper_wand, src_image->path);
+    if (status == MagickFalse) ThrowWandException(wallpaper_wand);
 
-    if (vertical_offset < 0) vertical_offset = 0;
+    monitor.horizontal_position = 0;
+    monitor.vertical_position = 0;
+    
+    RenderingRegion *rr =
+        create_rendering_region(wallpaper_wand, &monitor, bg_mode);
 
-    MagickResetIterator(magick_wand);
-    if (MagickNextImage(magick_wand) != MagickFalse) {
-        MagickResizeImage(magick_wand, monitor->width, aspect_image_height,
-                          LanczosFilter, 1.0);
-        MagickCropImage(magick_wand, monitor->width, monitor->height, 0,
-                        vertical_offset);
-    }
+    status = MagickResizeImage(wallpaper_wand, rr->width, rr->height,
+                               LanczosFilter, 1.0);
+    if (status == MagickFalse) ThrowWandException(wallpaper_wand);
 
-    status = MagickWriteImages(magick_wand, dst_image_path, MagickTrue);
-    if (status == MagickFalse) ThrowWandException(magick_wand);
-    magick_wand = DestroyMagickWand(magick_wand);
+    status = MagickCropImage(wallpaper_wand, rr->width, rr->height, rr->src_x,
+                             rr->src_y);
+    if (status == MagickFalse) ThrowWandException(wallpaper_wand);
+
+    color = NewPixelWand();
+    PixelSetColor(color, "#ff0000");
+
+    output_wand = NewMagickWand();
+    status =
+      MagickNewImage(output_wand, monitor.width, monitor.height, color);
+    if (status == MagickFalse) ThrowWandException(output_wand);
+
+    status = MagickCompositeImage(output_wand, wallpaper_wand, OverCompositeOp,
+                                  rr->monitor_x, rr->monitor_y);
+    if (status == MagickFalse) ThrowWandException(output_wand);
+
+    status = MagickWriteImages(output_wand, dst_image_path, MagickTrue);
+    if (status == MagickFalse) ThrowWandException(output_wand);
+
+    free(rr);
+
+    output_wand = DestroyMagickWand(output_wand);
+    wallpaper_wand = DestroyMagickWand(wallpaper_wand);
+    color = DestroyPixelWand(color);
+
     MagickWandTerminus();
-    return (0);
+    return 0;
 }
 
 static void setup_child_auto_exit() { prctl(PR_SET_PDEATHSIG, SIGTERM); }
@@ -198,7 +217,8 @@ end:
     return;
 }
 
-extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
+extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor,
+                                   BgMode bg_mode) {
     char base_dir[] = "/usr/share/backgrounds/wpc/versions";
     char *storage_directory =
         g_strdup_printf("%s/%dx%d", base_dir, monitor->width, monitor->height);
@@ -211,7 +231,7 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor) {
     char *dst_file_path =
         g_strdup_printf("%s/%s.png", storage_directory, new_filename);
 
-    if (scale_image(wallpaper, tmp_file_path, monitor) != 0) {
+    if (scale_image(wallpaper, tmp_file_path, *monitor, bg_mode) != 0) {
         fflush(stderr);
         g_free(tmp_file_path);
         g_error("Failed to scale image");

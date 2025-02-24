@@ -80,8 +80,8 @@ static void get_xdg_pictures_dir(Config *config) {
 
 extern void update_source_directory(Config *config, const gchar *new_src_dir) {
     free(config->source_directory);
-    gushort src_dir_len = strlen(new_src_dir);
-    config->source_directory = malloc(src_dir_len) + 1;
+    gushort src_dir_len = strlen(new_src_dir) + 1;
+    config->source_directory = malloc(src_dir_len);
     snprintf(config->source_directory, src_dir_len, "%s", new_src_dir);
 }
 

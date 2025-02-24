@@ -28,22 +28,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/stat.h>
 
 #include "monitors.h"
-#include <Imlib2.h>
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+#include <wand/MagickWand.h>
 
 #include "common.h"
 #include "config.h"
 #include "filesystem.h"
-#include "gib_imlib.h"
 #include "imagemagick.h"
 #include "wallpaper.h"
 #include "wpc.h"
-
 Window ipc_win = None;
 Window my_ipc_win = None;
 Atom ipc_atom = None;
@@ -59,7 +57,7 @@ Window root = 0;
 
 int childpid = 0;
 
-void init_x_and_imlib(void) {
+void init_x(void) {
     init_disp(&disp, &root);
     vis = DefaultVisual(disp, DefaultScreen(disp));
     depth = DefaultDepth(disp, DefaultScreen(disp));
@@ -67,87 +65,7 @@ void init_x_and_imlib(void) {
 
     scr = ScreenOfDisplay(disp, DefaultScreen(disp));
     xid_context = XUniqueContext();
-
-    imlib_context_set_display(disp);
-    imlib_context_set_visual(vis);
-    imlib_context_set_colormap(cm);
-    imlib_context_set_color_modifier(NULL);
-    imlib_context_set_progress_function(NULL);
-    imlib_context_set_operation(IMLIB_OP_COPY);
     wmDeleteWindow = XInternAtom(disp, "WM_DELETE_WINDOW", False);
-
-    imlib_set_cache_size(1024 * 1024);
-
-    return;
-}
-
-static void feh_wm_set_bg_scaled(Pixmap pmap, Imlib_Image im, int x, int y,
-                                 int w, int h) {
-    gib_imlib_render_image_on_drawable_at_size(pmap, im, x, y, w, h, 1, 1, 1);
-
-    return;
-}
-
-static void feh_wm_set_bg_centered(Pixmap pmap, Imlib_Image im, int x, int y,
-                                   int w, int h) {
-    int offset_x, offset_y;
-
-    offset_x = (w - gib_imlib_image_get_width(im)) >> 1;
-    offset_y = (h - gib_imlib_image_get_height(im)) >> 1;
-
-    gib_imlib_render_image_part_on_drawable_at_size(
-        pmap, im, ((offset_x < 0) ? -offset_x : 0),
-        ((offset_y < 0) ? -offset_y : 0), w, h,
-        x + ((offset_x > 0) ? offset_x : 0),
-        y + ((offset_y > 0) ? offset_y : 0), w, h, 1, 1, 0);
-
-    return;
-}
-
-static void feh_wm_set_bg_filled(Pixmap pmap, Imlib_Image im, int x, int y,
-                                 int w, int h) {
-    int img_w, img_h, cut_x;
-    int render_w, render_h, render_x, render_y;
-
-    img_w = gib_imlib_image_get_width(im);
-    img_h = gib_imlib_image_get_height(im);
-
-    cut_x = (((img_w * h) > (img_h * w)) ? 1 : 0);
-
-    render_w = (cut_x ? ((img_h * w) / h) : img_w);
-    render_h = (!cut_x ? ((img_w * h) / w) : img_h);
-
-    render_x = (cut_x ? ((img_w - render_w) >> 1) : 0);
-    render_y = (!cut_x ? ((img_h - render_h) >> 1) : 0);
-
-    gib_imlib_render_image_part_on_drawable_at_size(
-        pmap, im, render_x, render_y, render_w, render_h, x, y, w, h, 1, 1, 1);
-
-    return;
-}
-
-static void feh_wm_set_bg_maxed(Pixmap pmap, Imlib_Image im, int x, int y,
-                                int w, int h) {
-    int img_w, img_h, border_x;
-    int render_w, render_h, render_x, render_y;
-    int margin_x, margin_y;
-
-    img_w = gib_imlib_image_get_width(im);
-    img_h = gib_imlib_image_get_height(im);
-
-    border_x = (((img_w * h) > (img_h * w)) ? 0 : 1);
-
-    render_w = (border_x ? ((img_w * h) / img_h) : w);
-    render_h = (!border_x ? ((img_h * w) / img_w) : h);
-
-    margin_x = (w - render_w) >> 1;
-    margin_y = (h - render_h) >> 1;
-
-    render_x = x + (border_x ? margin_x : 0);
-    render_y = y + (!border_x ? margin_y : 0);
-
-    gib_imlib_render_image_on_drawable_at_size(pmap, im, render_x, render_y,
-                                               render_w, render_h, 1, 1, 1);
 
     return;
 }
@@ -157,35 +75,132 @@ static void set_default_backgroud(Monitor *monitor, Pixmap pmap, GC *gc) {
     XColor color;
     Colormap cmap = DefaultColormap(disp, DefaultScreen(disp));
 
-    XAllocNamedColor(disp, cmap, "black", &color, &color);
+    XAllocNamedColor(disp, cmap, "red", &color, &color);
     gcval.foreground = color.pixel;
     *gc = XCreateGC(disp, root, GCForeground, &gcval);
     XFillRectangle(disp, pmap, *gc, monitor->horizontal_position,
                    monitor->vertical_position, monitor->width, monitor->height);
 }
 
-static bool is_image_bigger_than_monitor(Monitor *monitor,
-                                         char *wallpaper_path) {
-    Wallpaper *wallpaper = malloc(sizeof(Wallpaper));
-    set_resolution(wallpaper_path, wallpaper);
-    if (monitor->width > wallpaper->width ||
-        monitor->height > wallpaper->height) {
-        return false;
+typedef struct {
+    int width;
+    int height;
+    int src_x;
+    int src_y;
+    int monitor_x;
+    int monitor_y;
+} RenderingRegion;
+
+static RenderingRegion *
+create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
+    int img_w, img_h;
+
+    int mon_w = monitor->width;
+    int mon_h = monitor->height;
+    int mon_x = monitor->horizontal_position;
+    int mon_y = monitor->vertical_position;
+
+    int scaled_w, scaled_h;
+
+    RenderingRegion *rr = malloc(sizeof(RenderingRegion));
+    img_w = MagickGetImageWidth(wand);
+    img_h = MagickGetImageHeight(wand);
+
+    if (bg_mode == BG_MODE_CENTER && (img_h > mon_h || img_h > mon_h)) {
+        bg_mode = BG_MODE_MAX;
     }
-    free(wallpaper);
-    return true;
+
+    switch (bg_mode) {
+    case BG_MODE_SCALE:
+        rr->src_x = 0;
+        rr->src_y = 0;
+        rr->monitor_x = mon_x;
+        rr->monitor_y = mon_y;
+        rr->width = mon_w;
+        rr->height = mon_h;
+        break;
+    case BG_MODE_CENTER:
+        int x = (mon_w - img_w) >> 1;
+        int y = (mon_h - img_h) >> 1;
+        rr->src_x = 0;
+        rr->src_y = 0;
+        rr->monitor_x = x;
+        rr->monitor_y = y;
+        rr->width = img_w;
+        rr->height = img_h;
+        break;
+    case BG_MODE_MAX:
+        rr->src_x = 0;
+        rr->src_y = 0;
+        bool border_x = (((img_w * mon_h) > (img_h * mon_w)) ? false : true);
+        rr->width = (border_x ? ((mon_h * img_w) / img_h) : mon_w);
+        rr->height = (!border_x ? ((mon_w * img_h) / img_w) : mon_h);
+        int margin_x = (mon_w - rr->width) >> 1;
+        int margin_y = (mon_h - rr->height) >> 1;
+        rr->monitor_x = mon_x + (border_x ? margin_x : 0);
+        rr->monitor_y = mon_y + (!border_x ? margin_y : 0);
+        break;
+    default:
+        rr->monitor_x = mon_x;
+        rr->monitor_y = mon_y;
+
+        bool cut_x = img_w * mon_h > img_h * mon_w ? true : false;
+
+        scaled_w = ((mon_h * img_w) / img_h);
+        scaled_h = ((mon_w * img_h) / img_w);
+        rr->width = cut_x ? scaled_w : mon_w;
+        rr->height = !cut_x ? scaled_h : mon_h;
+
+        rr->src_x = (cut_x ? ((scaled_w - rr->width) >> 1) : 0);
+        rr->src_y = (!cut_x ? ((scaled_h - rr->height) >> 1) : 0);
+    }
+
+    return rr;
+}
+
+static void set_bg_for_monitor(const gchar *wallpaper_path, BgMode bg_mode,
+                               GC *gc, Monitor *monitor, Pixmap pmap) {
+    set_default_backgroud(monitor, pmap, gc);
+
+    MagickWandGenesis();
+
+    MagickWand *wand = NewMagickWand();
+
+    if (MagickReadImage(wand, wallpaper_path) == MagickFalse) {
+        fprintf(stderr, "Failed to read image: %s\n", wallpaper_path);
+    }
+
+    RenderingRegion *rr = create_rendering_region(wand, monitor, bg_mode);
+
+    MagickResizeImage(wand, rr->width, rr->height, LanczosFilter, 1.0);
+    unsigned char *pixels = (unsigned char *)malloc(rr->width * rr->height * 4);
+
+    MagickExportImagePixels(wand, 0, 0, rr->width, rr->height, "BGRA",
+                            CharPixel, pixels);
+    XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
+                                  rr->width, rr->height, 32, 0);
+
+    printf("%d %d %d %d %d %d\n", rr->src_x, rr->src_y, rr->monitor_x,
+           rr->monitor_y, rr->width, rr->height);
+    XPutImage(disp, pmap, *gc, ximage, rr->src_x, rr->src_y, rr->monitor_x,
+              rr->monitor_y, rr->width, rr->height);
+
+    free(rr);
+    XFreeGC(disp, *gc);
+    DestroyMagickWand(wand);
+    MagickWandTerminus();
+    return;
 }
 
 static void feh_wm_set_bg(Config *config) {
-    XGCValues gcvalues;
     GC gc;
+    XGCValues gcvalues;
 
     Atom prop_root, prop_esetroot, type;
     int format;
     unsigned long length, after;
     unsigned char *data_root = NULL, *data_esetroot = NULL;
     Pixmap pmap_d1, pmap_d2;
-    Imlib_Image im;
 
     Display *disp2;
     Window root2;
@@ -203,53 +218,23 @@ static void feh_wm_set_bg(Config *config) {
         gushort w;
         Monitor *monitor = &monitors[m];
 
+        bool found = false;
         for (w = 0; w < config->number_of_monitors; w++) {
             if (strcmp(monitor->name, monitor_bgs[w].name) == 0) {
                 wallpaper_path = monitor_bgs[w].image_path;
                 bg_mode = monitor_bgs[w].bg_mode;
+                found = true;
                 break;
             }
         }
 
-        if (bg_mode == BG_MODE_CENTER &&
-            is_image_bigger_than_monitor(monitor, wallpaper_path)) {
-            bg_mode = BG_MODE_MAX;
-        }
-
-        im = imlib_load_image(wallpaper_path);
+        if (!found) continue;
 
         g_info("set filled bg: %s %s %d %d %d %d", monitor->name,
                wallpaper_path, monitor->width, monitor->height,
                monitor->horizontal_position, monitor->vertical_position);
-        switch (bg_mode) {
-        case BG_MODE_SCALE:
-            feh_wm_set_bg_scaled(pmap_d1, im, monitor->horizontal_position,
-                                 monitor->vertical_position, monitor->width,
-                                 monitor->height);
-            break;
-        case BG_MODE_MAX:
-            set_default_backgroud(monitor, pmap_d1, &gc);
-            feh_wm_set_bg_maxed(pmap_d1, im, monitor->horizontal_position,
-                                monitor->vertical_position, monitor->width,
-                                monitor->height);
-            XFreeGC(disp, gc);
-            break;
-        case BG_MODE_CENTER:
-            set_default_backgroud(monitor, pmap_d1, &gc);
-            feh_wm_set_bg_centered(pmap_d1, im, monitor->horizontal_position,
-                                   monitor->vertical_position, monitor->width,
-                                   monitor->height);
-            XFreeGC(disp, gc);
-            break;
-        default:
-            feh_wm_set_bg_filled(pmap_d1, im, monitor->horizontal_position,
-                                 monitor->vertical_position, monitor->width,
-                                 monitor->height);
-            break;
-        }
 
-        imlib_context_set_image(im);
-        imlib_free_image_and_decache();
+        set_bg_for_monitor(wallpaper_path, bg_mode, &gc, monitor, pmap_d1);
     }
 
     /* create new display, copy pixmap to new display */
@@ -314,7 +299,7 @@ static void feh_wm_set_bg(Config *config) {
 }
 
 extern void set_wallpapers() {
-    init_x_and_imlib();
+    init_x();
     Config *config = load_config();
     feh_wm_set_bg(config);
     free_config(config);

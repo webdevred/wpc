@@ -1,6 +1,5 @@
 #pragma once
 
-#include "monitors.h"
 #include <glib.h>
 
 typedef enum {

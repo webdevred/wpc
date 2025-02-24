@@ -1,12 +1,10 @@
 #include <dirent.h>
 #include <glib.h>
-#include <gtk/gtk.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "filesystem.h"
 #include "imagemagick.h"
-#include "wpc.h"
 
 extern void free_wallpapers(ArrayWrapper *arr) {
     Wallpaper *wallpapers = (Wallpaper *)arr->data;

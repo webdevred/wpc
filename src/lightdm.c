@@ -1,9 +1,6 @@
 #include <cjson/cJSON.h>
 #include <ctype.h>
-#include <dirent.h>
-#include <errno.h>
 #include <glib.h>
-#include <gtk/gtk.h>
 #include <signal.h>
 #include <stdio.h>
 #include <sys/prctl.h>
@@ -14,9 +11,7 @@
 #include "common.h"
 #include "config.h"
 #include "lightdm.h"
-#include "monitors.h"
 #include "resolution_scaling.h"
-#include "wpc.h"
 
 static void format_dst_filename(gchar **dst_filename) {
     gchar *str = *dst_filename;

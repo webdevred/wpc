@@ -42,7 +42,7 @@ ifeq ($(WPC_HELPER), 1)
     TARGETS += wpc_lightdm_helper
 endif
 
-.PHONY: all clean install bc ccls
+.PHONY: all clean install bc ccls iwyu
 
 .SILENT: ccls
 
@@ -70,6 +70,12 @@ install: all | $(WPC_INSTALL_DIR) $(WPC_HELPER_INSTALL_DIR)
 ifeq ($(WPC_HELPER), 1)
 	install -o root -g root -m 4711 wpc_lightdm_helper $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
 endif
+
+iwyu:
+	@for file in $(WPC_SRCS) $(HELPER_SRCS); do \
+		echo "Running iwyu on $$file..."; \
+		include-what-you-use -std=c23 $(WPC_CFLAGS) $(WPC_LDFLAGS) -I$(INCLUDE_DIR) $$file; \
+	done
 
 clean:
 	rm -rf $(BUILD_DIR) $(BC_DIR) $(TARGETS)

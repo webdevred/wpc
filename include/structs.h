@@ -1,5 +1,5 @@
 #pragma once
-#include "wpc.h"
+
 #include <glib.h>
 typedef struct {
     gushort width;

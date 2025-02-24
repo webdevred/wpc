@@ -1,21 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
-#include "filesystem.h"
 #include "gui.h"
-#include "lightdm.h"
-#include "monitors.h"
 
-#include "config.h"
 #include "wallpaper.h"
 #include <execinfo.h>
 #include <glib.h>
-#include <gtk/gtk.h>
 
 void custom_log_handler(const gchar *log_domain, GLogLevelFlags log_level,
                         const gchar *message, gpointer user_data) {

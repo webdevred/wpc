@@ -1,6 +1,5 @@
 #include <glib.h>
 #include <gtk/gtk.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -8,9 +7,7 @@
 
 #include "filesystem.h"
 #include "gui.h"
-#include "imagemagick.h"
 #include "monitors.h"
-#include "resolution_scaling.h"
 #include "wallpaper.h"
 
 #ifdef WPC_ENABLE_HELPER
@@ -224,32 +221,34 @@ static void show_images(GtkButton *button, GtkApplication *app) {
 
     gtk_drop_down_set_selected(GTK_DROP_DOWN(bg_mode_dropdown), (guint)bg_mode);
 
-    if (!g_object_get_data(G_OBJECT(app), "flowbox")) {
-        GtkWidget *vbox = g_object_get_data(G_OBJECT(app), "vbox");
-        GtkWidget *scrolled_window = gtk_scrolled_window_new();
-        gtk_box_append(GTK_BOX(vbox), scrolled_window);
-
-        GtkWidget *flowbox = gtk_flow_box_new();
-        gtk_widget_set_vexpand(GTK_WIDGET(flowbox), true);
-        g_object_set_data(G_OBJECT(app), "flowbox", flowbox);
-        gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), 10);
-        gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), 10);
-        gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window),
-                                      flowbox);
-
-        g_signal_connect(flowbox, "selected-children-changed",
-                         G_CALLBACK(image_selected), app);
-
-        gtk_widget_set_visible(scrolled_window, true);
-        gtk_widget_set_visible(flowbox, true);
-        show_images_src_dir(app);
+    GtkWidget *flowbox;
+    flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
+    if (flowbox) {
+        gtk_flow_box_unselect_all(GTK_FLOW_BOX(flowbox));
+        return;
     }
+
+    GtkWidget *vbox = g_object_get_data(G_OBJECT(app), "vbox");
+    GtkWidget *scrolled_window = gtk_scrolled_window_new();
+    gtk_box_append(GTK_BOX(vbox), scrolled_window);
+
+    flowbox = gtk_flow_box_new();
+    gtk_widget_set_vexpand(GTK_WIDGET(flowbox), true);
+    g_object_set_data(G_OBJECT(app), "flowbox", flowbox);
+    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), 10);
+    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), 10);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window),
+                                  flowbox);
+
+    g_signal_connect(flowbox, "selected-children-changed",
+                     G_CALLBACK(image_selected), app);
+
+    gtk_widget_set_visible(scrolled_window, true);
+    gtk_widget_set_visible(flowbox, true);
+    show_images_src_dir(app);
 }
 
 static void show_monitors(GtkApplication *app) {
-    GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
-    if (flowbox) gtk_flow_box_unselect_all(GTK_FLOW_BOX(flowbox));
-
     GtkBox *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
     if (!gtk_widget_is_visible(GTK_WIDGET(monitors_box)))
         gtk_widget_set_visible(GTK_WIDGET(monitors_box), true);

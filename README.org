@@ -17,6 +17,7 @@ The program supports various image formats and makes it easy to change the wallp
 - No need for `sudo` (previously required for manually editing `/etc/lightdm/*`).
 - Clean separation between *desktop wallpaper* handling and *lock screen wallpaper* handling.
 - Support for common image formats (JPEG, PNG, BMP, etc.).
+- Multiple wallpaper modes
 
 * Installation
 

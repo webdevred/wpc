@@ -24,27 +24,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-#include <limits.h>
-#include <sys/stat.h>
-
 #include "monitors.h"
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
-#include <X11/Xos.h>
-#include <X11/Xresource.h>
 #include <X11/Xutil.h>
-#include <X11/keysym.h>
 #include <wand/MagickWand.h>
 
-#include "common.h"
 #include "config.h"
-#include "filesystem.h"
-#include "imagemagick.h"
 #include "wallpaper.h"
-#include "wpc.h"
-Window ipc_win = None;
-Window my_ipc_win = None;
-Atom ipc_atom = None;
 
 Display *disp = NULL;
 Visual *vis = NULL;
@@ -55,8 +42,6 @@ Atom wmDeleteWindow;
 XContext xid_context = 0;
 Window root = 0;
 
-int childpid = 0;
-
 void init_x(void) {
     init_disp(&disp, &root);
     vis = DefaultVisual(disp, DefaultScreen(disp));
@@ -64,7 +49,6 @@ void init_x(void) {
     cm = DefaultColormap(disp, DefaultScreen(disp));
 
     scr = ScreenOfDisplay(disp, DefaultScreen(disp));
-    xid_context = XUniqueContext();
     wmDeleteWindow = XInternAtom(disp, "WM_DELETE_WINDOW", False);
 
     return;
@@ -83,24 +67,25 @@ static void set_default_backgroud(Monitor *monitor, Pixmap pmap, GC *gc) {
 }
 
 typedef struct {
-    int width;
-    int height;
-    int src_x;
-    int src_y;
-    int monitor_x;
-    int monitor_y;
+    gushort width;
+    gushort height;
+    gushort src_x;
+    gushort src_y;
+    gushort monitor_x;
+    gushort monitor_y;
 } RenderingRegion;
 
 static RenderingRegion *
 create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
-    int img_w, img_h;
+    gushort img_w, img_h;
 
-    int mon_w = monitor->width;
-    int mon_h = monitor->height;
-    int mon_x = monitor->horizontal_position;
-    int mon_y = monitor->vertical_position;
+    gushort mon_w = monitor->width;
+    gushort mon_h = monitor->height;
+    gushort mon_x = monitor->horizontal_position;
+    gushort mon_y = monitor->vertical_position;
 
-    int scaled_w, scaled_h;
+    bool border_x, cut_x;
+    gushort scaled_w, scaled_h, margin_x, margin_y;
 
     RenderingRegion *rr = malloc(sizeof(RenderingRegion));
     img_w = MagickGetImageWidth(wand);
@@ -120,23 +105,21 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         rr->height = mon_h;
         break;
     case BG_MODE_CENTER:
-        int x = (mon_w - img_w) >> 1;
-        int y = (mon_h - img_h) >> 1;
         rr->src_x = 0;
         rr->src_y = 0;
-        rr->monitor_x = x;
-        rr->monitor_y = y;
+        rr->monitor_x = (mon_w - img_w) >> 1;
+        rr->monitor_y = (mon_h - img_h) >> 1;
         rr->width = img_w;
         rr->height = img_h;
         break;
     case BG_MODE_MAX:
         rr->src_x = 0;
         rr->src_y = 0;
-        bool border_x = (((img_w * mon_h) > (img_h * mon_w)) ? false : true);
-        rr->width = (border_x ? ((mon_h * img_w) / img_h) : mon_w);
-        rr->height = (!border_x ? ((mon_w * img_h) / img_w) : mon_h);
-        int margin_x = (mon_w - rr->width) >> 1;
-        int margin_y = (mon_h - rr->height) >> 1;
+        border_x = ((img_w * mon_h) > (img_h * mon_w)) ? false : true;
+        rr->width = border_x ? ((mon_h * img_w) / img_h) : mon_w;
+        rr->height = !border_x ? ((mon_w * img_h) / img_w) : mon_h;
+        margin_x = (mon_w - rr->width) >> 1;
+        margin_y = (mon_h - rr->height) >> 1;
         rr->monitor_x = mon_x + (border_x ? margin_x : 0);
         rr->monitor_y = mon_y + (!border_x ? margin_y : 0);
         break;
@@ -144,15 +127,15 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         rr->monitor_x = mon_x;
         rr->monitor_y = mon_y;
 
-        bool cut_x = img_w * mon_h > img_h * mon_w ? true : false;
+        cut_x = img_w * mon_h > img_h * mon_w ? true : false;
 
-        scaled_w = ((mon_h * img_w) / img_h);
-        scaled_h = ((mon_w * img_h) / img_w);
+        scaled_w = (mon_h * img_w) / img_h;
+        scaled_h = (mon_w * img_h) / img_w;
         rr->width = cut_x ? scaled_w : mon_w;
         rr->height = !cut_x ? scaled_h : mon_h;
 
-        rr->src_x = (cut_x ? ((scaled_w - rr->width) >> 1) : 0);
-        rr->src_y = (!cut_x ? ((scaled_h - rr->height) >> 1) : 0);
+        rr->src_x = cut_x ? ((scaled_w - rr->width) >> 1) : 0;
+        rr->src_y = !cut_x ? ((scaled_h - rr->height) >> 1) : 0;
     }
 
     return rr;
@@ -175,13 +158,17 @@ static void set_bg_for_monitor(const gchar *wallpaper_path, BgMode bg_mode,
     MagickResizeImage(wand, rr->width, rr->height, LanczosFilter, 1.0);
     unsigned char *pixels = (unsigned char *)malloc(rr->width * rr->height * 4);
 
-    MagickExportImagePixels(wand, 0, 0, rr->width, rr->height, "BGRA",
+#if IMAGEMAGICK_MAJOR_VERSION >= 7
+    const char *pixel_format = "RGBA";
+#else
+    const char *pixel_format = "BGRA";
+#endif
+
+    MagickExportImagePixels(wand, 0, 0, rr->width, rr->height, pixel_format,
                             CharPixel, pixels);
     XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
                                   rr->width, rr->height, 32, 0);
 
-    printf("%d %d %d %d %d %d\n", rr->src_x, rr->src_y, rr->monitor_x,
-           rr->monitor_y, rr->width, rr->height);
     XPutImage(disp, pmap, *gc, ximage, rr->src_x, rr->src_y, rr->monitor_x,
               rr->monitor_y, rr->width, rr->height);
 
@@ -204,12 +191,12 @@ static void feh_wm_set_bg(Config *config) {
 
     Display *disp2;
     Window root2;
-    int depth2;
+    gushort depth2;
 
     pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
     ArrayWrapper *mon_arr_wrapper = list_monitors(true);
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
-    unsigned int m;
+    gushort m;
     MonitorBackgroundPair *monitor_bgs = config->monitors_with_backgrounds;
     char *wallpaper_path;
     BgMode bg_mode;

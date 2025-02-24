@@ -1,15 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
+#include <glib.h>
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "common.h"
 #include "monitors.h"
 #include "structs.h"
 
@@ -17,7 +9,7 @@ static void get_screen_resources(Display **disp, Window *root,
                                  XRRScreenResources **screen_resources) {
     *screen_resources = XRRGetScreenResources(*disp, *root);
     if (*screen_resources == NULL) {
-        fprintf(stderr, "Unable to get screen resources\n");
+        g_error("Unable to get screen resources\n");
         XCloseDisplay(*disp);
         exit(1);
     }
@@ -26,7 +18,7 @@ static void get_screen_resources(Display **disp, Window *root,
 extern void init_disp(Display **disp, Window *root) {
     *disp = XOpenDisplay(NULL);
     if (*disp == NULL) {
-        fprintf(stderr, "Unable to open X display\n");
+        g_error("Unable to open X display\n");
         exit(1);
     }
 

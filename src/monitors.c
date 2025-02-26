@@ -64,6 +64,7 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
             monitors[i].horizontal_position = x_monitors[i].x;
             monitors[i].vertical_position = x_monitors[i].y;
             monitors[i].primary = x_monitors[i].primary;
+            monitors[i].wallpaper = NULL;
         }
 
         array_wrapper->amount_allocated = (gushort)amount_used;
@@ -104,6 +105,7 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
                     monitors[i].vertical_position = crtcInfo->y;
                     monitors[i].primary =
                         (screen_resources->outputs[i] == primaryOutput);
+                    monitors[i].wallpaper = NULL;
 
                     XRRFreeCrtcInfo(crtcInfo);
                 }

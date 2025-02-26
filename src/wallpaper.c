@@ -212,9 +212,7 @@ static void feh_wm_set_bg(Config *config) {
     return;
 }
 
-extern void set_wallpapers() {
+extern void set_wallpapers(Config *config) {
     init_x();
-    Config *config = load_config();
     feh_wm_set_bg(config);
-    free_config(config);
 }

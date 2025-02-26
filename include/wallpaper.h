@@ -39,5 +39,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         if ((reply != IPC_FAKE) && (reply != IPC_TIMEOUT)) free(reply);        \
     } while (0)
 
-extern void set_wallpapers(void);
+extern void set_wallpapers(Config *config);
 #endif

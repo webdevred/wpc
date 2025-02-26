@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "gui.h"
 
 #include "wallpaper.h"
@@ -28,7 +29,9 @@ void custom_log_handler(const gchar *log_domain, GLogLevelFlags log_level,
 
 int main(int argc, char **argv) {
     if (argc == 2 && strcmp(argv[1], "-b") == 0) {
-        set_wallpapers();
+        Config *config = load_config();
+        set_wallpapers(config);
+        free_config(config);
         exit(0);
     }
 

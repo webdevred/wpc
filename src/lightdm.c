@@ -73,7 +73,7 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path,
 
     monitor.horizontal_position = 0;
     monitor.vertical_position = 0;
-    
+
     RenderingRegion *rr =
         create_rendering_region(wallpaper_wand, &monitor, bg_mode);
 
@@ -89,8 +89,7 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path,
     PixelSetColor(color, "#ff0000");
 
     output_wand = NewMagickWand();
-    status =
-      MagickNewImage(output_wand, monitor.width, monitor.height, color);
+    status = MagickNewImage(output_wand, monitor.width, monitor.height, color);
     if (status == MagickFalse) ThrowWandException(output_wand);
 
     status = MagickCompositeImage(output_wand, wallpaper_wand, OverCompositeOp,

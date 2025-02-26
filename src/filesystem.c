@@ -78,6 +78,7 @@ extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
         snprintf(wallpaper->path, path_size, "%s%s%s", source_directory,
                  slash_needed ? "/" : "", filename);
 
+        wallpaper->flow_child = NULL;
         set_resolution(wallpaper->path, wallpaper);
 
         amount_used++;

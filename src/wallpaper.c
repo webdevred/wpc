@@ -30,7 +30,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <X11/Xutil.h>
 #include <wand/MagickWand.h>
 
-#include "config.h"
 #include "rendering_region.h"
 #include "wallpaper.h"
 

@@ -1,7 +1,6 @@
 #include <glib.h>
 #include <wand/MagickWand.h>
 #include "structs.h"
-#include "config.h"
 
 typedef struct {
     gushort width;

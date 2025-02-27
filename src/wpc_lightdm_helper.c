@@ -1,16 +1,20 @@
-#include "common.h"
-
-#include <cjson/cJSON.h>
+#define _GNU_SOURCE
+#define _FILE_OFFSET_BITS 64
 
 #include <assert.h>
+#include <cjson/cJSON.h>
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
+
+#include "common.h"
 
 #define BUFFER_SIZE 1024
 
@@ -27,6 +31,41 @@ static int create_storage_dir(const char *file_path, mode_t mode) {
         *p = '/';
     }
     return 0;
+}
+
+static void copy_file(const char *src, const char *dst) {
+    int fd_in, fd_out;
+    off_t len, ret;
+    struct stat stat;
+    fd_in = open(src, O_RDONLY);
+    if (fd_in == -1) {
+        exit(EXIT_FAILURE);
+    }
+
+    if (fstat(fd_in, &stat) == -1) {
+        perror("fstat");
+        exit(EXIT_FAILURE);
+    }
+
+    len = stat.st_size;
+
+    fd_out = open(dst, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    if (fd_out == -1) {
+        exit(EXIT_FAILURE);
+    }
+
+    do {
+        ret = copy_file_range(fd_in, NULL, fd_out, NULL, len, 0);
+        if (ret == -1) {
+            perror("copy_file_range");
+            exit(EXIT_FAILURE);
+        }
+
+        len -= ret;
+    } while (len > 0 && ret > 0);
+
+    close(fd_in);
+    close(fd_out);
 }
 
 static bool is_this_line_monitor(char *line, const char *monitor_name) {
@@ -71,7 +110,7 @@ static int set_background(const char *scaled_wallpaper_path,
         }
     }
 
-    rename(scaled_wallpaper_path, dst_wallpaper_path);
+    copy_file(scaled_wallpaper_path, dst_wallpaper_path);
 
     char **config = NULL;
     int lines = 0;

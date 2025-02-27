@@ -10,7 +10,6 @@
 
 #define DM_CONFIG_PAYLOAD
 #include "common.h"
-#include "config.h"
 #include "lightdm.h"
 #include "rendering_region.h"
 

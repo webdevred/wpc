@@ -74,7 +74,7 @@ endif
 iwyu:
 	@for file in $(WPC_SRCS) $(HELPER_SRCS); do \
 		echo "Running iwyu on $$file..."; \
-		include-what-you-use -std=c23 $(WPC_CFLAGS) $(WPC_LDFLAGS) -I$(INCLUDE_DIR) $$file; \
+		include-what-you-use -Xiwyu --transitive_includes_only -std=c23 $(WPC_CFLAGS) $(WPC_LDFLAGS) -I$(INCLUDE_DIR) $$file; \
 	done
 
 clean:

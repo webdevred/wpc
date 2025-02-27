@@ -56,8 +56,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
 
         scaled_w = (mon_w * img_h) / img_w;
         scaled_h = (mon_h * img_w) / img_h;
-        rr->width = cut_x ? scaled_w : mon_w;
-        rr->height = !cut_x ? scaled_h : mon_h;
+        rr->width = cut_x ? mon_w : scaled_w;
+        rr->height = cut_x ? scaled_h : mon_h;
 
         rr->src_x = cut_x ? ((scaled_w - rr->width) >> 1) : 0;
         rr->src_y = !cut_x ? ((scaled_h - rr->height) >> 1) : 0;

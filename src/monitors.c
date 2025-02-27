@@ -67,6 +67,8 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
             monitors[i].wallpaper = NULL;
         }
 
+        XRRFreeMonitors(x_monitors);
+
         array_wrapper->amount_allocated = (gushort)amount_used;
         array_wrapper->amount_used = (gushort)amount_used;
     } else {

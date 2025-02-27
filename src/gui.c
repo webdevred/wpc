@@ -407,6 +407,11 @@ static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
         g_object_set_data(G_OBJECT(app), "wallpapers", NULL);
     }
 
+    GtkWidget *bg_mode_dropdown =
+        g_object_steal_data(G_OBJECT(app), "bg_mode_dropdown");
+    gtk_widget_unparent(bg_mode_dropdown);
+    g_object_set_data(G_OBJECT(app), "bg_mode_options", NULL);
+
     g_object_set_data(G_OBJECT(app), "selected_monitor", NULL);
     g_object_set_data(G_OBJECT(app), "menu_choice", NULL);
     g_object_set_data(G_OBJECT(app), "status_selected_monitor", NULL);
@@ -469,8 +474,10 @@ static void activate(GtkApplication *app, gpointer user_data) {
          monitor_id++) {
         Monitor *monitor = &monitors[monitor_id];
 
-        GtkWidget *button = gtk_button_new_with_label(g_strdup_printf(
-            "%s - %d x %d", monitor->name, monitor->width, monitor->height));
+        gchar *button_label = g_strdup_printf("%s - %d x %d", monitor->name,
+                                              monitor->width, monitor->height);
+        GtkWidget *button = gtk_button_new_with_label(button_label);
+        g_free(button_label);
 
         monitor->config_id = G_MAXUSHORT;
         for (config_monitor_id = 0; config_monitor_id < config_monitors_len;
@@ -510,7 +517,8 @@ static void activate(GtkApplication *app, gpointer user_data) {
     }
     g_ptr_array_add(array, NULL);
     string_list = gtk_string_list_new(
-        (const gchar *const *)g_ptr_array_free(array, FALSE));
+        (const gchar *const *)g_ptr_array_free(array, false));
+    g_object_set_data(G_OBJECT(app), "bg_mode_options", string_list);
 
     GtkWidget *dropdown = gtk_drop_down_new(G_LIST_MODEL(string_list), NULL);
     gtk_drop_down_set_selected(GTK_DROP_DOWN(dropdown), 0);

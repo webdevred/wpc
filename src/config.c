@@ -27,6 +27,7 @@ static void free_monitor_background_pair(MonitorBackgroundPair *pair) {
 extern void free_config(Config *config) {
     if (!config) return;
 
+    free(config->source_directory);
     if (config->monitors_with_backgrounds) {
         for (int i = 0; i < config->number_of_monitors; i++) {
             free_monitor_background_pair(&config->monitors_with_backgrounds[i]);
@@ -86,7 +87,9 @@ extern void update_source_directory(Config *config, const gchar *new_src_dir) {
 }
 
 extern Config *load_config() {
-    FILE *file = fopen(get_config_file(), "r");
+    gchar *config_filename = get_config_file();
+    FILE *file = fopen(config_filename, "r");
+    free(config_filename);
     Config *config = (Config *)malloc(sizeof(Config));
 
     if (!config) {

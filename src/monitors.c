@@ -72,6 +72,7 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
         array_wrapper->amount_allocated = (gushort)amount_used;
         array_wrapper->amount_used = (gushort)amount_used;
     } else {
+        array_wrapper->data = NULL;
         Monitor *monitors = (Monitor *)array_wrapper->data;
         gushort amount_used = 0;
         gushort amount_allocated = 0;
@@ -97,8 +98,9 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
                     amount_used++;
                     if (amount_used >= amount_allocated) {
                         amount_allocated += 3;
-                        monitors = realloc(monitors,
+                        array_wrapper->data = realloc(monitors,
                                            amount_allocated * sizeof(Monitor));
+                        monitors = (Monitor *)array_wrapper->data;
                     }
                     monitors[i].name = strdup(outputInfo->name);
                     monitors[i].width = crtcInfo->width;

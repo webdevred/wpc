@@ -90,12 +90,12 @@ static void set_bg_for_monitor(const gchar *wallpaper_path, BgMode bg_mode,
     const char *pixel_format = "BGRA";
 #endif
 
-    MagickExportImagePixels(wand, 0, 0, rr->width, rr->height, pixel_format,
+    MagickExportImagePixels(wand, 0,0, rr->width, rr->height, pixel_format,
                             CharPixel, pixels);
     XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
                                   rr->width, rr->height, 32, 0);
 
-    XPutImage(disp, pmap, *gc, ximage, rr->src_x, rr->src_y, rr->monitor_x,
+    XPutImage(disp, pmap, *gc, ximage, -(rr->src_x), -(rr->src_y), rr->monitor_x,
               rr->monitor_y, rr->width, rr->height);
 
     free(rr);
@@ -120,7 +120,7 @@ static void feh_wm_set_bg(Config *config) {
     gushort depth2;
 
     pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
-    ArrayWrapper *mon_arr_wrapper = list_monitors(true);
+    ArrayWrapper *mon_arr_wrapper = list_monitors(false);
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
     gushort m;
     MonitorBackgroundPair *monitor_bgs = config->monitors_with_backgrounds;

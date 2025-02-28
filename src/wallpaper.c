@@ -59,11 +59,11 @@ static void set_default_backgroud(Monitor *monitor, Pixmap pmap, GC *gc) {
     XColor color;
     Colormap cmap = DefaultColormap(disp, DefaultScreen(disp));
 
-    XAllocNamedColor(disp, cmap, "red", &color, &color);
+    XAllocNamedColor(disp, cmap, "#ff0000", &color, &color);
     gcval.foreground = color.pixel;
     *gc = XCreateGC(disp, root, GCForeground, &gcval);
-    XFillRectangle(disp, pmap, *gc, monitor->horizontal_position,
-                   monitor->vertical_position, monitor->width, monitor->height);
+    XFillRectangle(disp, pmap, *gc, monitor->left_x, monitor->top_y,
+                   monitor->width, monitor->height);
 }
 
 static void set_bg_for_monitor(const gchar *wallpaper_path, BgMode bg_mode,
@@ -90,13 +90,13 @@ static void set_bg_for_monitor(const gchar *wallpaper_path, BgMode bg_mode,
     const char *pixel_format = "BGRA";
 #endif
 
-    MagickExportImagePixels(wand, 0,0, rr->width, rr->height, pixel_format,
+    MagickExportImagePixels(wand, 0, 0, rr->width, rr->height, pixel_format,
                             CharPixel, pixels);
     XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
                                   rr->width, rr->height, 32, 0);
 
-    XPutImage(disp, pmap, *gc, ximage, -(rr->src_x), -(rr->src_y), rr->monitor_x,
-              rr->monitor_y, rr->width, rr->height);
+    XPutImage(disp, pmap, *gc, ximage, -(rr->src_x), -(rr->src_y),
+              rr->monitor_x, rr->monitor_y, rr->width, rr->height);
 
     free(rr);
     XFreeGC(disp, *gc);
@@ -144,8 +144,8 @@ static void feh_wm_set_bg(Config *config) {
         if (!found) continue;
 
         g_info("set filled bg: %s %s %d %d %d %d", monitor->name,
-               wallpaper_path, monitor->width, monitor->height,
-               monitor->horizontal_position, monitor->vertical_position);
+               wallpaper_path, monitor->width, monitor->height, monitor->left_x,
+               monitor->top_y);
 
         set_bg_for_monitor(wallpaper_path, bg_mode, &gc, monitor, pmap_d1);
     }

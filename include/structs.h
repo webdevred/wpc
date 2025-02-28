@@ -34,9 +34,10 @@ typedef struct {
 typedef struct {
     gushort width;
     gushort height;
-    gushort vertical_position;
-    gushort horizontal_position;
+    gushort left_x;
+    gushort top_y;
     gushort config_id;
+    bool belongs_to_config;
     bool primary;
     gchar *name;
     Wallpaper *wallpaper;

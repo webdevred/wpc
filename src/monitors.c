@@ -61,9 +61,12 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
             monitors[i].name = XGetAtomName(display, x_monitors[i].name);
             monitors[i].width = x_monitors[i].width;
             monitors[i].height = x_monitors[i].height;
-            monitors[i].horizontal_position = x_monitors[i].x;
-            monitors[i].vertical_position = x_monitors[i].y;
+            monitors[i].left_x = x_monitors[i].x;
+            monitors[i].top_y = x_monitors[i].y;
             monitors[i].primary = x_monitors[i].primary;
+
+            monitors[i].belongs_to_config = false;
+            monitors[i].config_id = 0;
             monitors[i].wallpaper = NULL;
         }
 
@@ -98,20 +101,23 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
                     amount_used++;
                     if (amount_used >= amount_allocated) {
                         amount_allocated += 3;
-                        array_wrapper->data = realloc(monitors,
-                                           amount_allocated * sizeof(Monitor));
+                        array_wrapper->data = realloc(
+                            monitors, amount_allocated * sizeof(Monitor));
                         monitors = (Monitor *)array_wrapper->data;
                     }
                     monitors[i].name = strdup(outputInfo->name);
                     monitors[i].width = crtcInfo->width;
                     monitors[i].height = crtcInfo->height;
-                    monitors[i].horizontal_position = crtcInfo->x;
-                    monitors[i].vertical_position = crtcInfo->y;
+                    monitors[i].left_x = crtcInfo->x;
+                    monitors[i].top_y = crtcInfo->y;
                     monitors[i].primary =
                         (screen_resources->outputs[i] == primaryOutput);
-                    monitors[i].wallpaper = NULL;
 
                     XRRFreeCrtcInfo(crtcInfo);
+
+                    monitors[i].wallpaper = NULL;
+                    monitors[i].belongs_to_config = false;
+                    monitors[i].config_id = 0;
                 }
             }
         }

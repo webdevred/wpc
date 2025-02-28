@@ -6,8 +6,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
 
     gushort mon_w = monitor->width;
     gushort mon_h = monitor->height;
-    gushort mon_x = monitor->horizontal_position;
-    gushort mon_y = monitor->vertical_position;
+    gushort mon_x = monitor->left_x;
+    gushort mon_y = monitor->top_y;
 
     bool border_x, cut_x;
     gushort margin_x, margin_y;
@@ -30,7 +30,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         rr->height = mon_h;
         break;
     case BG_MODE_CENTER:
-      /* add a margin to the center so that it is placed in the center of the screen */
+        /* add a margin to the center so that it is placed in the center of the
+         * screen */
         rr->src_x = 0;
         rr->src_y = 0;
         rr->monitor_x = mon_x + (mon_w - img_w) / 2;
@@ -39,10 +40,12 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         rr->height = img_h;
         break;
     case BG_MODE_MAX:
-      /* add a margin to the center so that it is placed in the center of the screen
-         comparing products (old_height * new_width) and (old_height * new_width) to determine which side to scale
-       also the side that doesnt need scaling have its size var (rr->width/rr->height) set to the monitor size for that side
-      for the other side scale up according  to new_width = (new_height * old_wihth) / old_height */
+        /* add a margin to the center so that it is placed in the center of the
+        screen comparing products (old_height * new_width) and (old_height *
+        new_width) to determine which side to scale also the side that doesnt
+        need scaling have its size var (rr->width/rr->height) set to the monitor
+        size for that side for the other side scale up according  to new_width =
+        (new_height * old_wihth) / old_height */
         rr->src_x = 0;
         rr->src_y = 0;
         border_x = img_w * mon_h < img_h * mon_w;
@@ -54,9 +57,11 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         rr->monitor_y = mon_y + (!border_x ? margin_y : 0);
         break;
     default:
-      /*  comparing products (old_height * new_width) and (old_height * new_width) to determine which side to cut
-        the side that doesnt need scaling have its size var (rr->width/rr->height) set to the monitor size for that side
-      for the other side scale up according  to new_width = (new_height * old_width) / old_height */
+        /*  comparing products (old_height * new_width) and (old_height *
+        new_width) to determine which side to cut the side that doesnt need
+        scaling have its size var (rr->width/rr->height) set to the monitor size
+        for that side for the other side scale up according  to new_width =
+        (new_height * old_width) / old_height */
         rr->monitor_x = mon_x;
         rr->monitor_y = mon_y;
 
@@ -65,8 +70,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         rr->width = mon_w;
         rr->height = mon_h;
 
-        rr->src_x = cut_x ? ( (rr->width - mon_w) / 2) : 0;
-        rr->src_y = !cut_x ? ( (rr->height - mon_h) / 2) : 0;
+        rr->src_x = cut_x ? ((rr->width - mon_w) / 2) : 0;
+        rr->src_y = !cut_x ? ((rr->height - mon_h) / 2) : 0;
     }
 
     return rr;

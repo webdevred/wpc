@@ -60,7 +60,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 
         if (g_strcmp0(wallpaper->path, "") == 0) return;
 
-        if (monitor->config_id != G_MAXUSHORT) {
+        if (monitor->belongs_to_config) {
             MonitorBackgroundPair *config_monitor =
                 &config->monitors_with_backgrounds[monitor->config_id];
             config_monitor->image_path = strdup(wallpaper_path);
@@ -140,7 +140,7 @@ static void show_images_src_dir(GtkApplication *app) {
 
             for (monitor_id = 0; monitor_id < mon_wrap->amount_used;
                  monitor_id++) {
-                if (monitors[monitor_id].config_id != G_MAXUSHORT) {
+                if (monitors[monitor_id].belongs_to_config) {
                     Monitor *monitor = &monitors[monitor_id];
                     MonitorBackgroundPair *bmp =
                         &config->monitors_with_backgrounds[monitor->config_id];
@@ -179,7 +179,7 @@ static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
 
     if (monitor == NULL || bg_mode == BG_MODE_NOT_SET) return;
 
-    if (*menu_choice == WM_BACKGROUND && monitor->config_id != G_MAXUSHORT) {
+    if (*menu_choice == WM_BACKGROUND && monitor->belongs_to_config) {
         MonitorBackgroundPair *config_monitor =
             &config->monitors_with_backgrounds[monitor->config_id];
         config_monitor->bg_mode = bg_mode;
@@ -221,7 +221,7 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     BgMode bg_mode = BG_MODE_NOT_SET;
 
     if (*menu_choice == WM_BACKGROUND && monitor &&
-        monitor->config_id != G_MAXUSHORT) {
+        monitor->belongs_to_config) {
         MonitorBackgroundPair *config_monitor =
             &config->monitors_with_backgrounds[monitor->config_id];
         bg_mode = config_monitor->bg_mode;
@@ -479,11 +479,11 @@ static void activate(GtkApplication *app, gpointer user_data) {
         GtkWidget *button = gtk_button_new_with_label(button_label);
         g_free(button_label);
 
-        monitor->config_id = G_MAXUSHORT;
         for (config_monitor_id = 0; config_monitor_id < config_monitors_len;
              config_monitor_id++) {
             if (g_strcmp0(bmp[config_monitor_id].name, monitor->name) == 0) {
                 monitor->config_id = config_monitor_id;
+                monitor->belongs_to_config = true;
                 break;
             }
         }

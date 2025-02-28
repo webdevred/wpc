@@ -70,8 +70,8 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path,
     status = MagickReadImage(wallpaper_wand, src_image->path);
     if (status == MagickFalse) ThrowWandException(wallpaper_wand);
 
-    monitor.horizontal_position = 0;
-    monitor.vertical_position = 0;
+    monitor.left_x = 0;
+    monitor.top_y = 0;
 
     RenderingRegion *rr =
         create_rendering_region(wallpaper_wand, &monitor, bg_mode);

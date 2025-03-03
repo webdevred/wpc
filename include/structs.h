@@ -16,11 +16,11 @@ typedef struct {
     gchar *name;
     gchar *image_path;
     BgMode bg_mode;
-} MonitorBackgroundPair;
+} ConfigMonitor;
 
 typedef struct {
     gushort number_of_monitors;
-    MonitorBackgroundPair *monitors_with_backgrounds;
+    ConfigMonitor *monitors_with_backgrounds;
     gchar *source_directory;
 } Config;
 

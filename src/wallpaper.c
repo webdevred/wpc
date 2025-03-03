@@ -123,7 +123,7 @@ static void feh_wm_set_bg(Config *config) {
     ArrayWrapper *mon_arr_wrapper = list_monitors(false);
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
     gushort m;
-    MonitorBackgroundPair *monitor_bgs = config->monitors_with_backgrounds;
+    ConfigMonitor *monitor_bgs = config->monitors_with_backgrounds;
     char *wallpaper_path;
     BgMode bg_mode;
 

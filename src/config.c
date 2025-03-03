@@ -12,7 +12,7 @@ static gchar *get_config_file() {
     return g_strdup_printf("%s/%s", home, CONFIG_FILE);
 }
 
-static void free_monitor_background_pair(MonitorBackgroundPair *pair) {
+static void free_monitor_background_pair(ConfigMonitor *pair) {
     if (!pair) return;
     if (pair->name) {
         free(pair->name);
@@ -160,9 +160,9 @@ extern Config *load_config() {
     int number_of_monitors = 0;
 
     cJSON_ArrayForEach(monitor_background_json, monitors_json) {
-        MonitorBackgroundPair *temp =
+        ConfigMonitor *temp =
             realloc(config->monitors_with_backgrounds,
-                    (number_of_monitors + 1) * sizeof(MonitorBackgroundPair));
+                    (number_of_monitors + 1) * sizeof(ConfigMonitor));
 
         if (!temp) {
             perror("Memory reallocation failed");
@@ -172,9 +172,9 @@ extern Config *load_config() {
         }
         config->monitors_with_backgrounds = temp;
 
-        MonitorBackgroundPair *monitor_background_pair =
+        ConfigMonitor *monitor_background_pair =
             &config->monitors_with_backgrounds[number_of_monitors];
-        memset(monitor_background_pair, 0, sizeof(MonitorBackgroundPair));
+        memset(monitor_background_pair, 0, sizeof(ConfigMonitor));
 
         cJSON *monitor_name_json =
             cJSON_GetObjectItemCaseSensitive(monitor_background_json, "name");
@@ -253,7 +253,7 @@ extern void dump_config(Config *config) {
     int number_of_monitors = config->number_of_monitors;
     for (int i = 0; i < number_of_monitors; i++) {
         cJSON *monitor_background_json = cJSON_CreateObject();
-        MonitorBackgroundPair *monitor_background_pair =
+        ConfigMonitor *monitor_background_pair =
             &config->monitors_with_backgrounds[i];
 
         if (cJSON_AddStringToObject(

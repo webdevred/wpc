@@ -61,24 +61,24 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
         if (g_strcmp0(wallpaper->path, "") == 0) return;
 
         if (monitor->belongs_to_config) {
-            MonitorBackgroundPair *config_monitor =
+            ConfigMonitor *config_monitor =
                 &config->monitors_with_backgrounds[monitor->config_id];
             config_monitor->image_path = strdup(wallpaper_path);
             monitor->wallpaper = wallpaper;
         } else {
-            MonitorBackgroundPair *monitors = config->monitors_with_backgrounds;
+            ConfigMonitor *monitors = config->monitors_with_backgrounds;
             int number_of_monitors = config->number_of_monitors;
 
-            MonitorBackgroundPair *new_list =
+            ConfigMonitor *new_list =
                 realloc(monitors, (number_of_monitors + 1) *
-                                      sizeof(MonitorBackgroundPair));
+                                      sizeof(ConfigMonitor));
             if (!new_list) {
                 fprintf(stderr, "Error: Memory allocation failed.\n");
                 return;
             }
 
             config->monitors_with_backgrounds = new_list;
-            MonitorBackgroundPair *new_bmp = &new_list[number_of_monitors];
+            ConfigMonitor *new_bmp = &new_list[number_of_monitors];
 
             new_bmp->name = strdup(monitor_name);
             new_bmp->image_path = strdup(wallpaper_path);
@@ -142,7 +142,7 @@ static void show_images_src_dir(GtkApplication *app) {
                  monitor_id++) {
                 if (monitors[monitor_id].belongs_to_config) {
                     Monitor *monitor = &monitors[monitor_id];
-                    MonitorBackgroundPair *bmp =
+                    ConfigMonitor *bmp =
                         &config->monitors_with_backgrounds[monitor->config_id];
                     if (g_strcmp0(bmp->image_path, wallpapers[i].path) == 0) {
                         monitor->wallpaper = &wallpapers[i];
@@ -180,7 +180,7 @@ static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
     if (monitor == NULL || bg_mode == BG_MODE_NOT_SET) return;
 
     if (*menu_choice == WM_BACKGROUND && monitor->belongs_to_config) {
-        MonitorBackgroundPair *config_monitor =
+        ConfigMonitor *config_monitor =
             &config->monitors_with_backgrounds[monitor->config_id];
         config_monitor->bg_mode = bg_mode;
 
@@ -222,7 +222,7 @@ static void show_images(GtkButton *button, GtkApplication *app) {
 
     if (*menu_choice == WM_BACKGROUND && monitor &&
         monitor->belongs_to_config) {
-        MonitorBackgroundPair *config_monitor =
+        ConfigMonitor *config_monitor =
             &config->monitors_with_backgrounds[monitor->config_id];
         bg_mode = config_monitor->bg_mode;
     }
@@ -468,7 +468,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gushort monitor_id;
     gushort config_monitor_id;
     gushort config_monitors_len = config->number_of_monitors;
-    MonitorBackgroundPair *bmp = config->monitors_with_backgrounds;
+    ConfigMonitor *bmp = config->monitors_with_backgrounds;
 
     for (monitor_id = 0; monitor_id < mon_arr_wrapper->amount_used;
          monitor_id++) {

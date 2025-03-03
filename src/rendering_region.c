@@ -10,7 +10,7 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
     gushort mon_y = monitor->top_y;
 
     bool border_x, cut_x;
-    gushort margin_x, margin_y;
+    gushort scaled_w, scaled_h, margin_x, margin_y;
 
     RenderingRegion *rr = malloc(sizeof(RenderingRegion));
     img_w = MagickGetImageWidth(wand);
@@ -67,11 +67,14 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
 
         cut_x = img_w * mon_h > img_h * mon_w;
 
-        rr->width = mon_w;
-        rr->height = mon_h;
+        scaled_w = (mon_h * img_w) / img_h;
+        scaled_h = (mon_w * img_h) / img_w;
 
-        rr->src_x = cut_x ? ((rr->width - mon_w) / 2) : 0;
-        rr->src_y = !cut_x ? ((rr->height - mon_h) / 2) : 0;
+        rr->width = cut_x ? scaled_w : mon_w;
+        rr->height = cut_x ? mon_h : scaled_h;
+
+        rr->src_x = cut_x ? ((scaled_w - mon_w) / 2) : 0;
+        rr->src_y = !cut_x ? ((scaled_h - mon_h) / 2) : 0;
     }
 
     return rr;

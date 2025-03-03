@@ -95,8 +95,8 @@ static void set_bg_for_monitor(const gchar *wallpaper_path, BgMode bg_mode,
     XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
                                   rr->width, rr->height, 32, 0);
 
-    XPutImage(disp, pmap, *gc, ximage, -(rr->src_x), -(rr->src_y),
-              rr->monitor_x, rr->monitor_y, rr->width, rr->height);
+    XPutImage(disp, pmap, *gc, ximage, rr->src_x, rr->src_y, rr->monitor_x,
+              rr->monitor_y, rr->width, rr->height);
 
     free(rr);
     XFreeGC(disp, *gc);

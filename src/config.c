@@ -183,6 +183,9 @@ extern Config *load_config() {
         cJSON *bg_mode_json =
             cJSON_GetObjectItemCaseSensitive(monitor_background_json, "bgMode");
 
+        cJSON *bg_fallback_color_json = cJSON_GetObjectItemCaseSensitive(
+            monitor_background_json, "bgFallbackColor");
+
         if (!cJSON_IsString(monitor_name_json) ||
             !monitor_name_json->valuestring) {
             fprintf(stderr, "Warning: Monitor name is missing or invalid, "
@@ -218,6 +221,11 @@ extern Config *load_config() {
                 bg_mode_from_string(bg_mode_json->valuestring);
         } else {
             monitor_background_pair->bg_mode = BG_MODE_FILL;
+        }
+
+        if (cJSON_IsString(bg_fallback_color_json)) {
+            monitor_background_pair->bg_fallback_color =
+                g_strdup(bg_fallback_color_json->valuestring);
         }
 
         number_of_monitors++;
@@ -256,7 +264,12 @@ extern void dump_config(Config *config) {
         ConfigMonitor *monitor_background_pair =
             &config->monitors_with_backgrounds[i];
 
-        if (cJSON_AddStringToObject(
+        if (monitor_background_pair->bg_fallback_color) {
+            cJSON_AddStringToObject(monitor_background_json,
+                                    "bgFalllbackColor",
+                                    monitor_background_pair->bg_fallback_color);
+        }
+
                 monitor_background_json, "bgMode",
                 bg_mode_to_string(monitor_background_pair->bg_mode)) == NULL) {
             goto end;

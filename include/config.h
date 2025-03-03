@@ -1,9 +1,9 @@
 #pragma once
 
-#include <glib.h>
 #include "structs.h"
+#include <glib.h>
 
-extern void init_bgpair(Config **config, const gchar* monitor_name);
+extern void init_bgpair(Config **config, const gchar *monitor_name);
 
 extern void free_config(Config *config);
 

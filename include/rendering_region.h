@@ -1,6 +1,6 @@
+#include "structs.h"
 #include <glib.h>
 #include <wand/MagickWand.h>
-#include "structs.h"
 
 typedef struct {
     gushort width;
@@ -11,4 +11,5 @@ typedef struct {
     gushort monitor_y;
 } RenderingRegion;
 
-extern RenderingRegion *create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode);
+extern RenderingRegion *
+create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode);

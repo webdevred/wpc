@@ -69,9 +69,8 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
             ConfigMonitor *monitors = config->monitors_with_backgrounds;
             int number_of_monitors = config->number_of_monitors;
 
-            ConfigMonitor *new_list =
-                realloc(monitors, (number_of_monitors + 1) *
-                                      sizeof(ConfigMonitor));
+            ConfigMonitor *new_list = realloc(
+                monitors, (number_of_monitors + 1) * sizeof(ConfigMonitor));
             if (!new_list) {
                 fprintf(stderr, "Error: Memory allocation failed.\n");
                 return;

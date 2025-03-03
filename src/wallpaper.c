@@ -54,21 +54,23 @@ void init_x(void) {
     return;
 }
 
-static void set_default_backgroud(Monitor *monitor, Pixmap pmap, GC *gc) {
+static void set_default_backgroud(gchar *fallback_bg, Monitor *monitor,
+                                  Pixmap pmap, GC *gc) {
     XGCValues gcval;
     XColor color;
     Colormap cmap = DefaultColormap(disp, DefaultScreen(disp));
 
-    XAllocNamedColor(disp, cmap, "#ff0000", &color, &color);
+    XAllocNamedColor(disp, cmap, fallback_bg, &color, &color);
     gcval.foreground = color.pixel;
     *gc = XCreateGC(disp, root, GCForeground, &gcval);
     XFillRectangle(disp, pmap, *gc, monitor->left_x, monitor->top_y,
                    monitor->width, monitor->height);
 }
 
-static void set_bg_for_monitor(const gchar *wallpaper_path, BgMode bg_mode,
-                               GC *gc, Monitor *monitor, Pixmap pmap) {
-    set_default_backgroud(monitor, pmap, gc);
+static void set_bg_for_monitor(const gchar *wallpaper_path, gchar *fallback_bg,
+                               BgMode bg_mode, GC *gc, Monitor *monitor,
+                               Pixmap pmap) {
+    set_default_backgroud(fallback_bg, monitor, pmap, gc);
 
     MagickWandGenesis();
 
@@ -125,6 +127,7 @@ static void feh_wm_set_bg(Config *config) {
     gushort m;
     ConfigMonitor *monitor_bgs = config->monitors_with_backgrounds;
     char *wallpaper_path;
+    char *bg_fallback_color = NULL;
     BgMode bg_mode;
 
     for (m = 0; m < mon_arr_wrapper->amount_used; m++) {
@@ -135,6 +138,7 @@ static void feh_wm_set_bg(Config *config) {
         for (w = 0; w < config->number_of_monitors; w++) {
             if (strcmp(monitor->name, monitor_bgs[w].name) == 0) {
                 wallpaper_path = monitor_bgs[w].image_path;
+                bg_fallback_color = monitor_bgs[w].bg_fallback_color;
                 bg_mode = monitor_bgs[w].bg_mode;
                 found = true;
                 break;
@@ -147,7 +151,9 @@ static void feh_wm_set_bg(Config *config) {
                wallpaper_path, monitor->width, monitor->height, monitor->left_x,
                monitor->top_y);
 
-        set_bg_for_monitor(wallpaper_path, bg_mode, &gc, monitor, pmap_d1);
+        if (!bg_fallback_color) bg_fallback_color = "#ff0000";
+        set_bg_for_monitor(wallpaper_path, bg_fallback_color, bg_mode, &gc,
+                           monitor, pmap_d1);
     }
 
     /* create new display, copy pixmap to new display */

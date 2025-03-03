@@ -15,6 +15,7 @@ typedef enum {
 typedef struct {
     gchar *name;
     gchar *image_path;
+    gchar *bg_fallback_color;
     BgMode bg_mode;
 } ConfigMonitor;
 
@@ -48,4 +49,3 @@ typedef struct {
     gushort amount_allocated;
     gushort amount_used;
 } ArrayWrapper;
-

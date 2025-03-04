@@ -20,6 +20,11 @@ static void free_monitor_background_pair(ConfigMonitor *pair) {
         pair->bg_fallback_color = NULL;
     }
 
+    if (pair->valid_bg_fallback_color) {
+        free(pair->valid_bg_fallback_color);
+        pair->valid_bg_fallback_color = NULL;
+    }
+
     if (pair->name) {
         free(pair->name);
         pair->name = NULL;
@@ -90,6 +95,50 @@ extern void update_source_directory(Config *config, const gchar *new_src_dir) {
     gushort src_dir_len = strlen(new_src_dir) + 1;
     config->source_directory = malloc(src_dir_len);
     snprintf(config->source_directory, src_dir_len, "%s", new_src_dir);
+}
+
+static bool validate_bg_fallback(ConfigMonitor *config) {
+    gchar *old_color = config->bg_fallback_color;
+    if (old_color == NULL || old_color[0] == '\0') goto invalidate;
+
+    guint old_color_len = strlen(old_color);
+    gchar new_color[8];
+    new_color[0] = '#';
+    guint new_color_index = 1;
+    guint old_color_index = 0;
+
+    if (old_color[0] == '#') {
+        if (old_color_len == 4 || old_color_len == 7) {
+            old_color_index = 1;
+        } else {
+            goto invalidate;
+        }
+    } else {
+        if (old_color_len == 3 || old_color_len == 6) {
+            old_color_index = 0;
+        } else {
+            goto invalidate;
+        }
+    }
+
+    for (; old_color_index < old_color_len; old_color_index++) {
+        gchar color_cell = old_color[old_color_index];
+        if (color_cell < '0' || color_cell > 'f') goto invalidate;
+        new_color[new_color_index++] = color_cell;
+        if (old_color_len == 3) {
+            new_color[new_color_index++] = color_cell;
+        }
+    }
+
+    new_color[new_color_index] = '\0';
+
+    config->valid_bg_fallback_color = g_strdup(new_color);
+    return true;
+
+invalidate:
+    config->valid_bg_fallback_color = g_strdup("");
+    g_warning("invalid fallback_bg: %s", old_color);
+    return false;
 }
 
 extern Config *load_config() {
@@ -232,7 +281,11 @@ extern Config *load_config() {
         if (cJSON_IsString(bg_fallback_color_json)) {
             monitor_background_pair->bg_fallback_color =
                 g_strdup(bg_fallback_color_json->valuestring);
+        } else {
+            monitor_background_pair->bg_fallback_color = g_strdup("");
         }
+
+        validate_bg_fallback(monitor_background_pair);
 
         number_of_monitors++;
     }

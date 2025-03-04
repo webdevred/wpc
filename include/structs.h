@@ -16,6 +16,7 @@ typedef struct {
     gchar *name;
     gchar *image_path;
     gchar *bg_fallback_color;
+    gchar *valid_bg_fallback_color;
     BgMode bg_mode;
 } ConfigMonitor;
 

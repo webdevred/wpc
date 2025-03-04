@@ -19,6 +19,13 @@ The program supports various image formats and makes it easy to change the wallp
 - Support for common image formats (JPEG, PNG, BMP, etc.).
 - Multiple wallpaper modes
 
+* Planned features/todo list
+
+- Add Wayland support
+- Improve security for desktop manager helper
+- Implement support for other desktop manager than LightDM + lightdm-gtk-greeter
+- Implement auto scaling amount of image per row on window resize, preferably without depending on Adwaita
+
 * Installation
 
 To install WPC, follow these steps:

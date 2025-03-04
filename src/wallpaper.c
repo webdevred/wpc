@@ -67,49 +67,60 @@ static void set_default_backgroud(gchar *bg_fallback, Monitor *monitor,
                    monitor->width, monitor->height);
 }
 
-static bool validate_fallback_bg(gchar **bg_fallback) {
-    gchar *old_color = *bg_fallback;
+static bool validate_bg_fallback(gchar **bg_fallback_color) {
+    gchar *old_color = *bg_fallback_color;
     gchar color_cell;
-    guint old_color_len, old_color_index, new_color_index;
+    guint old_color_len, old_color_index;
+    guint new_color_index = 1;
     gchar new_color[8];
+
+    static bool already_logged = false;
 
     if (old_color == NULL || !strcmp(old_color, "")) return false;
 
     old_color_len = strlen(old_color);
 
-    if (old_color[0] == '#' && old_color_len == 7) return true;
-    if (old_color_len != 4) goto invalidate;
-
     new_color[0] = '#';
 
-    old_color_index = 0;
-    new_color_index = 1;
-
     if (old_color[0] == '#') {
-        old_color_index = 1;
+       if (old_color_len == 4 || old_color_len == 7) {
+            old_color_index = 1;
+        } else {
+            goto invalidate;
+        }
+    } else {
+        if (old_color_len == 3 || old_color_len == 6) {
+            old_color_index = 0;
+        } else {
+            goto invalidate;
+        }
     }
 
-    for (; old_color_index < 4; old_color_index++) {
+    for (; old_color_index < old_color_len; old_color_index++) {
         color_cell = old_color[old_color_index];
         if (color_cell < '0' || color_cell > 'f') goto invalidate;
         new_color[new_color_index] = color_cell;
         new_color_index++;
-        new_color[new_color_index] = color_cell;
-        new_color_index++;
+        if (old_color_len == 3) {
+            new_color[new_color_index] = color_cell;
+            new_color_index++;
+        }
     }
 
-    free(*bg_fallback);
-    *bg_fallback = g_strdup(new_color);
+    g_free(*bg_fallback_color);
+    *bg_fallback_color = g_strdup(new_color);
     return true;
 
 invalidate:
-    g_warning("invalid fallback_bg: %s", old_color);
+    if (!already_logged) g_warning("invalid fallback_bg: %s", old_color);
+    already_logged = true;
+    g_free(*bg_fallback_color);
     return false;
 }
 
-static void set_bg_for_monitor(const gchar *wallpaper_path, gchar **fallback_bg,
-                               BgMode bg_mode, GC *gc, Monitor *monitor,
-                               Pixmap pmap) {
+static void set_bg_for_monitor(const gchar *wallpaper_path,
+                               gchar **bg_fallback_color, BgMode bg_mode,
+                               GC *gc, Monitor *monitor, Pixmap pmap) {
     MagickWandGenesis();
 
     MagickStatusType status;
@@ -120,12 +131,11 @@ static void set_bg_for_monitor(const gchar *wallpaper_path, gchar **fallback_bg,
         exit(1);
     }
 
-    if (!validate_fallback_bg(fallback_bg)) {
-        g_free(*fallback_bg);
-        *fallback_bg = g_strdup("#ff0000");
+    if (!validate_bg_fallback(bg_fallback_color)) {
+        *bg_fallback_color = g_strdup("#ff0000");
     }
 
-    set_default_backgroud(*fallback_bg, monitor, pmap, gc);
+    set_default_backgroud(*bg_fallback_color, monitor, pmap, gc);
 
     RenderingRegion *rr = create_rendering_region(wand, monitor, bg_mode);
 

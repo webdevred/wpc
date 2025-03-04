@@ -14,6 +14,12 @@ static gchar *get_config_file() {
 
 static void free_monitor_background_pair(ConfigMonitor *pair) {
     if (!pair) return;
+
+    if (pair->bg_fallback_color) {
+        free(pair->bg_fallback_color);
+        pair->bg_fallback_color = NULL;
+    }
+
     if (pair->name) {
         free(pair->name);
         pair->name = NULL;
@@ -265,14 +271,14 @@ extern void dump_config(Config *config) {
             &config->monitors_with_backgrounds[i];
 
         if (monitor_background_pair->bg_fallback_color) {
-            cJSON_AddStringToObject(monitor_background_json,
-                                    "bgFalllbackColor",
+            cJSON_AddStringToObject(monitor_background_json, "bgFallbackColor",
                                     monitor_background_pair->bg_fallback_color);
         }
 
+        if (monitor_background_pair->bg_mode) {
+            cJSON_AddStringToObject(
                 monitor_background_json, "bgMode",
-                bg_mode_to_string(monitor_background_pair->bg_mode)) == NULL) {
-            goto end;
+                bg_mode_to_string(monitor_background_pair->bg_mode));
         }
 
         if (cJSON_AddStringToObject(monitor_background_json, "name",

@@ -54,26 +54,65 @@ void init_x(void) {
     return;
 }
 
-static void set_default_backgroud(gchar *fallback_bg, Monitor *monitor,
+static void set_default_backgroud(gchar *bg_fallback, Monitor *monitor,
                                   Pixmap pmap, GC *gc) {
     XGCValues gcval;
     XColor color;
     Colormap cmap = DefaultColormap(disp, DefaultScreen(disp));
 
-    XAllocNamedColor(disp, cmap, fallback_bg, &color, &color);
+    XAllocNamedColor(disp, cmap, bg_fallback, &color, &color);
     gcval.foreground = color.pixel;
     *gc = XCreateGC(disp, root, GCForeground, &gcval);
     XFillRectangle(disp, pmap, *gc, monitor->left_x, monitor->top_y,
                    monitor->width, monitor->height);
 }
 
-static void set_bg_for_monitor(const gchar *wallpaper_path, gchar *fallback_bg,
+static bool validate_fallback_bg(gchar **bg_fallback) {
+    gchar *old_color = *bg_fallback;
+    gchar color_cell;
+    guint old_color_len, old_color_index, new_color_index;
+    gchar new_color[8];
+
+    if (old_color == NULL || !strcmp(old_color, "")) return false;
+
+    old_color_len = strlen(old_color);
+
+    if (old_color[0] == '#' && old_color_len == 7) return true;
+    if (old_color_len != 4) goto invalidate;
+
+    new_color[0] = '#';
+
+    old_color_index = 0;
+    new_color_index = 1;
+
+    if (old_color[0] == '#') {
+        old_color_index = 1;
+    }
+
+    for (; old_color_index < 4; old_color_index++) {
+        color_cell = old_color[old_color_index];
+        if (color_cell < '0' || color_cell > 'f') goto invalidate;
+        new_color[new_color_index] = color_cell;
+        new_color_index++;
+        new_color[new_color_index] = color_cell;
+        new_color_index++;
+    }
+
+    free(*bg_fallback);
+    *bg_fallback = g_strdup(new_color);
+    return true;
+
+invalidate:
+    g_warning("invalid fallback_bg: %s", old_color);
+    return false;
+}
+
+static void set_bg_for_monitor(const gchar *wallpaper_path, gchar **fallback_bg,
                                BgMode bg_mode, GC *gc, Monitor *monitor,
                                Pixmap pmap) {
-    set_default_backgroud(fallback_bg, monitor, pmap, gc);
-
     MagickWandGenesis();
 
+    MagickStatusType status;
     MagickWand *wand = NewMagickWand();
 
     if (MagickReadImage(wand, wallpaper_path) == MagickFalse) {
@@ -81,9 +120,21 @@ static void set_bg_for_monitor(const gchar *wallpaper_path, gchar *fallback_bg,
         exit(1);
     }
 
+    if (!validate_fallback_bg(fallback_bg)) {
+        g_free(*fallback_bg);
+        *fallback_bg = g_strdup("#ff0000");
+    }
+
+    set_default_backgroud(*fallback_bg, monitor, pmap, gc);
+
     RenderingRegion *rr = create_rendering_region(wand, monitor, bg_mode);
 
-    MagickResizeImage(wand, rr->width, rr->height, LanczosFilter, 1.0);
+    status = MagickResizeImage(wand, rr->width, rr->height, LanczosFilter, 1.0);
+
+    if (status == MagickFalse) {
+        g_error("failed to scale image: %s", wallpaper_path);
+    }
+
     unsigned char *pixels = (unsigned char *)malloc(rr->width * rr->height * 4);
 
 #if IMAGEMAGICK_MAJOR_VERSION >= 7
@@ -96,11 +147,16 @@ static void set_bg_for_monitor(const gchar *wallpaper_path, gchar *fallback_bg,
                             CharPixel, pixels);
     XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
                                   rr->width, rr->height, 32, 0);
-
     XPutImage(disp, pmap, *gc, ximage, rr->src_x, rr->src_y, rr->monitor_x,
               rr->monitor_y, rr->width, rr->height);
 
     free(rr);
+
+    ximage->data = NULL;
+    XDestroyImage(ximage);
+    free(pixels);
+    pixels = NULL;
+
     XFreeGC(disp, *gc);
     DestroyMagickWand(wand);
     MagickWandTerminus();
@@ -126,19 +182,22 @@ static void feh_wm_set_bg(Config *config) {
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
     gushort m;
     ConfigMonitor *monitor_bgs = config->monitors_with_backgrounds;
-    char *wallpaper_path;
-    char *bg_fallback_color = NULL;
+    gchar *wallpaper_path = NULL;
+    gchar *bg_fallback_color = NULL;
     BgMode bg_mode;
 
-    for (m = 0; m < mon_arr_wrapper->amount_used; m++) {
-        gushort w;
-        Monitor *monitor = &monitors[m];
+    gushort w;
+    bool found;
+    Monitor *monitor;
 
-        bool found = false;
+    for (m = 0; m < mon_arr_wrapper->amount_used; m++) {
+        monitor = &monitors[m];
+
+        found = false;
         for (w = 0; w < config->number_of_monitors; w++) {
             if (strcmp(monitor->name, monitor_bgs[w].name) == 0) {
                 wallpaper_path = monitor_bgs[w].image_path;
-                bg_fallback_color = monitor_bgs[w].bg_fallback_color;
+                bg_fallback_color = g_strdup(monitor_bgs[w].bg_fallback_color);
                 bg_mode = monitor_bgs[w].bg_mode;
                 found = true;
                 break;
@@ -151,10 +210,11 @@ static void feh_wm_set_bg(Config *config) {
                wallpaper_path, monitor->width, monitor->height, monitor->left_x,
                monitor->top_y);
 
-        if (!bg_fallback_color) bg_fallback_color = "#ff0000";
-        set_bg_for_monitor(wallpaper_path, bg_fallback_color, bg_mode, &gc,
+        set_bg_for_monitor(wallpaper_path, &bg_fallback_color, bg_mode, &gc,
                            monitor, pmap_d1);
+        g_free(bg_fallback_color);
     }
+    free_monitors(mon_arr_wrapper);
 
     /* create new display, copy pixmap to new display */
     disp2 = XOpenDisplay(NULL);

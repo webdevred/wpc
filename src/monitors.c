@@ -120,7 +120,11 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
                     monitors[i].config_id = 0;
                 }
             }
+
+            XRRFreeOutputInfo(outputInfo);
         }
+
+        XRRFreeScreenResources(screen_resources);
 
         array_wrapper->amount_allocated = amount_allocated;
         array_wrapper->amount_used = amount_used;

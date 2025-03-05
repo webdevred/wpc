@@ -76,8 +76,10 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
     MagickWand *wand = NewMagickWand();
 
     if (MagickReadImage(wand, wallpaper_path) == MagickFalse) {
-        g_error("Failed to read image: %s\n", wallpaper_path);
-        exit(1);
+        DestroyMagickWand(wand);
+        MagickWandTerminus();
+        g_warning("Failed to read image: %s\n", wallpaper_path);
+        return;
     }
 
     gchar *bg_fallback_color;

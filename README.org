@@ -11,13 +11,15 @@ The program supports various image formats and makes it easy to change the wallp
 
 * Features
 
+[[file:wpc_demo.gif]]
+
 - Set wallpapers for both the *desktop* and *lock screen*.
 - Store background source directory along with set backgrounds for monitors in a *config file*.
 - Ability to *change the source directory* directly from the GUI.
 - No need for `sudo` (previously required for manually editing `/etc/lightdm/*`).
 - Clean separation between *desktop wallpaper* handling and *lock screen wallpaper* handling.
 - Support for common image formats (JPEG, PNG, BMP, etc.).
-- Multiple wallpaper modes
+- [[file:BG_MODES.org][Multiple wallpaper modes]]
 
 * Planned features/todo list
 
@@ -64,14 +66,13 @@ If you do not create a config file then source directory will be set to your pic
   - libxrandr-dev
   - libx11-dev
   - libgtk4-dev
-  - libimlib2-dev
   - libcjson-dev
   - libmagickwand
 
 Install the requirements like this:
 
 #+begin_src bash
-  sudo apt update && sudo apt install -y libxrandr-dev libx11-dev libgtk4-dev libimlib2-dev libcjson-dev libmagickwand-dev
+  sudo apt update && sudo apt install -y libxrandr-dev libx11-dev libgtk4-dev libcjson-dev libmagickwand-dev
 #+end_src
 
 * License

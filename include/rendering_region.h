@@ -3,12 +3,9 @@
 #include <wand/MagickWand.h>
 
 typedef struct {
-    gushort width;
-    gushort height;
-    gushort src_x;
-    gushort src_y;
-    gushort monitor_x;
-    gushort monitor_y;
+    gushort width, height;
+    gushort src_x, src_y;
+    gshort monitor_x, monitor_y;
 } RenderingRegion;
 
 extern RenderingRegion *

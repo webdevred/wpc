@@ -6,8 +6,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
 
     gushort mon_w = monitor->width;
     gushort mon_h = monitor->height;
-    gushort mon_x = monitor->left_x;
-    gushort mon_y = monitor->top_y;
+    gshort mon_x = monitor->left_x;
+    gshort mon_y = monitor->top_y;
 
     bool border_x, cut_x;
     gushort scaled_w, scaled_h, margin_x, margin_y;

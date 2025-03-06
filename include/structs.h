@@ -27,17 +27,14 @@ typedef struct {
 } Config;
 
 typedef struct {
-    gushort width;
-    gushort height;
+    gushort width, height;
     gchar *path;
     GtkFlowBoxChild *flow_child;
 } Wallpaper;
 
 typedef struct {
-    gushort width;
-    gushort height;
-    gushort left_x;
-    gushort top_y;
+    gushort width, height;
+    gshort left_x, top_y;
     gushort config_id;
     bool belongs_to_config;
     bool primary;

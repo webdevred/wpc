@@ -178,19 +178,19 @@ static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
 
     if (monitor == NULL || bg_mode == BG_MODE_NOT_SET) return;
 
-    if (*menu_choice == WM_BACKGROUND && monitor->belongs_to_config) {
+    if (*menu_choice == DM_BACKGROUND) {
+        GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
+        GList *flowbox_children =
+            gtk_flow_box_get_selected_children(GTK_FLOW_BOX(flowbox));
+        Wallpaper *wallpaper = get_flow_child_wallpaper(flowbox_children->data);
+        lightdm_set_background(wallpaper, monitor, bg_mode);
+    } else if (monitor->belongs_to_config) {
         ConfigMonitor *config_monitor =
             &config->monitors_with_backgrounds[monitor->config_id];
         config_monitor->bg_mode = bg_mode;
 
         dump_config(config);
         set_wallpapers(config);
-    } else {
-        GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
-        GList *flowbox_children =
-            gtk_flow_box_get_selected_children(GTK_FLOW_BOX(flowbox));
-        Wallpaper *wallpaper = get_flow_child_wallpaper(flowbox_children->data);
-        lightdm_set_background(wallpaper, monitor, bg_mode);
     }
 }
 
@@ -213,6 +213,12 @@ static void show_images(GtkButton *button, GtkApplication *app) {
 
     gtk_label_set_label(status_label, status);
 
+    if (monitor) {
+        g_object_set_data(G_OBJECT(app), "selected_monitor", (gpointer)monitor);
+    } else {
+        g_object_set_data(G_OBJECT(app), "selected_monitor", NULL);
+    }
+
     GtkWidget *bg_mode_dropdown =
         g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
     gtk_widget_set_visible(GTK_WIDGET(bg_mode_dropdown), true);
@@ -227,12 +233,6 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     }
 
     gtk_drop_down_set_selected(GTK_DROP_DOWN(bg_mode_dropdown), bg_mode);
-
-    if (monitor) {
-        g_object_set_data(G_OBJECT(app), "selected_monitor", (gpointer)monitor);
-    } else {
-        g_object_set_data(G_OBJECT(app), "selected_monitor", NULL);
-    }
 
     GtkWidget *flowbox;
     flowbox = g_object_get_data(G_OBJECT(app), "flowbox");

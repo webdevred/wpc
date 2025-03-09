@@ -11,7 +11,7 @@ COMMON_CFLAGS := -Wall -Wextra -std=c23 -g3
 COMMON_LDFLAGS := $(shell pkg-config --libs libcjson)
 
 WPC_CFLAGS := $(COMMON_CFLAGS) $(shell pkg-config --cflags gtk4 glib-2.0 MagickWand libcjson) -DWPC_HELPER_PATH="\"$(WPC_HELPER_PATH)\""
-WPC_LDFLAGS := $(COMMON_LDFLAGS) $(shell pkg-config --libs gtk4 glib-2.0 x11 xrandr MagickWand)
+WPC_LDFLAGS := $(COMMON_LDFLAGS) $(shell pkg-config --libs gtk4 glib-2.0 x11 xrandr MagickWand libmagic)
 
 HELPER_CFLAGS := $(COMMON_CFLAGS)
 HELPER_LDFLAGS := $(COMMON_LDFLAGS)

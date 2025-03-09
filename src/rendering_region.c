@@ -11,7 +11,7 @@
  *   - wand: Pointer to the MagickWand containing the image.
  *   - monitor: Pointer to the Monitor struct with monitor dimensions and
  * position.
- *   - bg_mode: Specifies how the image should be rendered. Please BG_MODES.org
+ *   - bg_mode: Specifies how the image should be rendered. Please see BG_MODES.org
  * for explanation for information.
  *
  * Returns:
@@ -20,7 +20,7 @@
  */
 extern RenderingRegion *
 create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
-    gushort img_w, img_h;
+    size_t img_w, img_h;
 
     gushort mon_w = monitor->width;
     gushort mon_h = monitor->height;

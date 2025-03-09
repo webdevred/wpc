@@ -1,10 +1,53 @@
 #include <dirent.h>
 #include <glib.h>
+#include <magic.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <wand/MagickWand.h>
 
 #include "filesystem.h"
-#include "imagemagick.h"
+
+static bool check_image(const char *filename) {
+    magic_t magic = magic_open(MAGIC_MIME_TYPE);
+    if (!magic) {
+        fprintf(stderr, "Failed to initialize libmagic\n");
+        return false;
+    }
+
+    magic_load(magic, NULL);
+
+    bool valid = true;
+    const char *mime_type = magic_file(magic, filename);
+    if (!mime_type || strncmp(mime_type, "image/", 6) != 0) {
+        valid = false;
+        g_info("File %s has invalid MIME type %s", filename, mime_type);
+    }
+
+    magic_close(magic);
+
+    return valid;
+}
+
+static bool set_width_and_height(Wallpaper *wallpaper) {
+    MagickWand *wand = NewMagickWand();
+
+    if (MagickReadImage(wand, wallpaper->path) == MagickFalse) {
+        g_warning("Failed to read image when setting width and height: %s\n",
+                  wallpaper->path);
+        DestroyMagickWand(wand);
+        MagickWandTerminus();
+        return false;
+    }
+
+    size_t width = MagickGetImageWidth(wand);
+    size_t height = MagickGetImageHeight(wand);
+
+    wallpaper->width = width;
+    wallpaper->height = height;
+
+    DestroyMagickWand(wand);
+    return true;
+}
 
 extern void free_wallpapers(ArrayWrapper *arr) {
     Wallpaper *wallpapers = (Wallpaper *)arr->data;
@@ -44,6 +87,9 @@ extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
     src_dir_len += slash_needed ? 1 : 0;
 
     struct dirent *file;
+
+    MagickWandGenesis();
+
     while ((file = readdir(dir)) != NULL) {
         gchar *filename = file->d_name;
 
@@ -79,10 +125,16 @@ extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
                  slash_needed ? "/" : "", filename);
 
         wallpaper->flow_child = NULL;
-        set_resolution(wallpaper->path, wallpaper);
+
+        if (!check_image(wallpaper->path) || !set_width_and_height(wallpaper)) {
+            free(wallpaper->path);
+            continue;
+        }
 
         amount_used++;
     }
+
+    MagickWandTerminus();
 
     closedir(dir);
 

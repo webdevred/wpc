@@ -27,7 +27,7 @@ typedef struct {
 } Config;
 
 typedef struct {
-    gushort width, height;
+    size_t width, height;
     gchar *path;
     GtkFlowBoxChild *flow_child;
 } Wallpaper;

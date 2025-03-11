@@ -116,6 +116,8 @@ static void show_images_src_dir(GtkApplication *app) {
         g_object_set_data(G_OBJECT(app), "wallpapers", NULL);
     }
 
+    GtkAdjustment *adjustment = gtk_adjustment_new(0, 0, 100, 1, 10, 0);
+    gtk_flow_box_set_vadjustment(GTK_FLOW_BOX(flowbox), adjustment);
     gtk_flow_box_remove_all(GTK_FLOW_BOX(flowbox));
 
     ArrayWrapper *wp_arr_wrapper = list_wallpapers(source_directory);
@@ -245,10 +247,9 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     gtk_box_append(GTK_BOX(vbox), scrolled_window);
 
     flowbox = gtk_flow_box_new();
+    gtk_widget_add_css_class(GTK_WIDGET(flowbox), "wallpapers_flowbox");
     gtk_widget_set_vexpand(GTK_WIDGET(flowbox), true);
     g_object_set_data(G_OBJECT(app), "flowbox", flowbox);
-    gtk_flow_box_set_row_spacing(GTK_FLOW_BOX(flowbox), 10);
-    gtk_flow_box_set_column_spacing(GTK_FLOW_BOX(flowbox), 10);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window),
                                   flowbox);
 
@@ -534,6 +535,12 @@ static void activate(GtkApplication *app, gpointer user_data) {
                       status_selected_monitor);
 
     gtk_widget_set_visible(window, true);
+
+    gchar css[] = ".wallpapers_flowbox image { min-width: 30em; min-height: 20em; margin: 0.1em; }";
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_string(provider, css);
+    GdkDisplay* display = gtk_widget_get_display(window);
+    gtk_style_context_add_provider_for_display(display, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 
 extern int initialize_application(int argc, char **argv) {

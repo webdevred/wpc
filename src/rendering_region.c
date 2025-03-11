@@ -11,8 +11,8 @@
  *   - wand: Pointer to the MagickWand containing the image.
  *   - monitor: Pointer to the Monitor struct with monitor dimensions and
  * position.
- *   - bg_mode: Specifies how the image should be rendered. Please see BG_MODES.org
- * for explanation for information.
+ *   - bg_mode: Specifies how the image should be rendered. Please see
+ * BG_MODES.org for explanation for information.
  *
  * Returns:
  *   A pointer to the allocated RenderingRegion with computed source offsets and

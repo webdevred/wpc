@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-CC := gcc
+CC := clang
 
 WPC_HELPER ?= 1
 
@@ -7,7 +7,7 @@ WPC_INSTALL_DIR := /usr/local/bin
 WPC_HELPER_INSTALL_DIR := /usr/local/libexec/wpc
 WPC_HELPER_PATH := $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
 
-COMMON_CFLAGS := -Wall -Wextra -std=c23 -g3
+COMMON_CFLAGS := -Wall -Wextra -std=gnu2x -g3
 COMMON_LDFLAGS := $(shell pkg-config --libs libcjson)
 
 WPC_CFLAGS := $(COMMON_CFLAGS) $(shell pkg-config --cflags gtk4 glib-2.0 MagickWand libcjson) -DWPC_HELPER_PATH="\"$(WPC_HELPER_PATH)\""
@@ -42,11 +42,9 @@ ifeq ($(WPC_HELPER), 1)
     TARGETS += wpc_lightdm_helper
 endif
 
-.PHONY: all clean install bc ccls iwyu
+.PHONY: all clean install bc iwyu compile_commands
 
-.SILENT: ccls
-
-all: $(TARGETS)
+all: $(TARGETS) bc
 
 wpc: $(WPC_OBJS)
 	$(CC) $(WPC_OBJS) $(WPC_LDFLAGS) -o $@
@@ -57,7 +55,7 @@ wpc_lightdm_helper: $(HELPER_OBJS)
 endif
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
-	$(CC) $(if $(filter $(HELPER_SRCS), $<),$(HELPER_CFLAGS),$(WPC_CFLAGS)) -I$(INCLUDE_DIR) -MMD -MP -c $< -o $@
+	$(CC) -MJ $@.json $(if $(filter $(HELPER_SRCS), $<),$(HELPER_CFLAGS),$(WPC_CFLAGS)) -I$(INCLUDE_DIR) -MMD -MP -c $< -o $@
 
 $(BC_DIR)/%.bc: $(SRC_DIR)/%.c | $(BC_DIR)
 	$(CC) $(if $(filter $(HELPER_SRCS), $<),$(HELPER_CFLAGS),$(WPC_CFLAGS)) -I$(INCLUDE_DIR) -I/usr/include/glib-2.0 -c -emit-llvm $< -o $@
@@ -78,11 +76,18 @@ iwyu:
 	done
 
 clean:
-	rm -rf $(BUILD_DIR) $(BC_DIR) $(TARGETS)
+	rm -rf $(BUILD_DIR) $(TARGETS) compile_commands.json
+	$(MAKE) clean_bc
 
-bc: $(BC_FILES)
+clean_bc:
+	find $(BC_DIR) -type f -name '*.bc' -delete
 
-ccls:
-	echo clang > .ccls
-	echo -n -I$(INCLUDE_DIR) >> .ccls
-	echo -n "$(WPC_CFLAGS) $(HELPER_CFLAGS) $(WPC_LDFLAGS) $(HELPER_LDFLAGS)" | tr ' ' '\n' | sort -u >> .ccls
+bc: | $(BC_DIR)
+	$(MAKE) $(BC_FILES)
+
+compile_commands.json: $(WPC_OBJS) $(HELPER_OBJS)
+	@echo "[" > compile_commands.json
+	@find $(BUILD_DIR) -name '*.json' -exec cat {} + | sed '$$s/,$$//' >> compile_commands.json
+	@echo "]" >> compile_commands.json
+
+compile_commands: compile_commands.json

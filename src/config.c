@@ -1,4 +1,5 @@
 #include "config.h"
+#include "structs.h"
 #include <cjson/cJSON.h>
 #include <glib.h>
 #include <stdio.h>
@@ -85,16 +86,14 @@ static void get_xdg_pictures_dir(Config *config) {
     const gchar *xdg_pictures_dir =
         g_get_user_special_dir(G_USER_DIRECTORY_PICTURES);
     if (!xdg_pictures_dir) {
-        xdg_pictures_dir = "";
+        xdg_pictures_dir = g_strdup("");
     }
-    config->source_directory = strdup(xdg_pictures_dir);
+    config->source_directory = g_strdup(xdg_pictures_dir);
 }
 
 extern void update_source_directory(Config *config, const gchar *new_src_dir) {
     free(config->source_directory);
-    gushort src_dir_len = strlen(new_src_dir) + 1;
-    config->source_directory = malloc(src_dir_len);
-    snprintf(config->source_directory, src_dir_len, "%s", new_src_dir);
+    config->source_directory = g_strdup(new_src_dir);
 }
 
 static bool validate_bg_fallback(ConfigMonitor *config) {
@@ -111,19 +110,19 @@ static bool validate_bg_fallback(ConfigMonitor *config) {
         if (old_color_len == 4 || old_color_len == 7) {
             old_color_index = 1;
         } else {
-            goto invalidate;
+            goto warn;
         }
     } else {
         if (old_color_len == 3 || old_color_len == 6) {
             old_color_index = 0;
         } else {
-            goto invalidate;
+            goto warn;
         }
     }
 
     for (; old_color_index < old_color_len; old_color_index++) {
         gchar color_cell = old_color[old_color_index];
-        if (color_cell < '0' || color_cell > 'f') goto invalidate;
+        if (color_cell < '0' || color_cell > 'f') goto warn;
         new_color[new_color_index++] = color_cell;
         if (old_color_len == 3) {
             new_color[new_color_index++] = color_cell;
@@ -135,9 +134,11 @@ static bool validate_bg_fallback(ConfigMonitor *config) {
     config->valid_bg_fallback_color = g_strdup(new_color);
     return true;
 
+warn:
+    g_warning("invalid fallback_bg: %s", old_color);
+
 invalidate:
     config->valid_bg_fallback_color = g_strdup("");
-    g_warning("invalid fallback_bg: %s", old_color);
     return false;
 }
 
@@ -323,15 +324,21 @@ extern void dump_config(Config *config) {
         ConfigMonitor *monitor_background_pair =
             &config->monitors_with_backgrounds[i];
 
-        if (monitor_background_pair->bg_fallback_color) {
-            cJSON_AddStringToObject(monitor_background_json, "bgFallbackColor",
-                                    monitor_background_pair->bg_fallback_color);
+        if (monitor_background_pair->bg_fallback_color &&
+            g_strcmp0(monitor_background_pair->bg_fallback_color, "") != 0) {
+            if (cJSON_AddStringToObject(
+                    monitor_background_json, "bgFallbackColor",
+                    monitor_background_pair->bg_fallback_color) == NULL) {
+                cJSON_Delete(monitor_background_json);
+                goto end;
+            }
         }
 
-        if (monitor_background_pair->bg_mode) {
-            cJSON_AddStringToObject(
-                monitor_background_json, "bgMode",
-                bg_mode_to_string(monitor_background_pair->bg_mode));
+        BgMode bg_mode = monitor_background_pair->bg_mode;
+
+        if (bg_mode) {
+            cJSON_AddStringToObject(monitor_background_json, "bgMode",
+                                    bg_mode_to_string(bg_mode));
         }
 
         if (cJSON_AddStringToObject(monitor_background_json, "name",
@@ -353,11 +360,10 @@ extern void dump_config(Config *config) {
     if (string == NULL) {
         fprintf(stderr, "Failed to print monitor.\n");
     }
-
-end:
-    cJSON_Delete(settings);
     fwrite(string, sizeof(char), strlen(string), file);
     fflush(file);
+end:
+    cJSON_Delete(settings);
     fclose(file);
     free(string);
 }

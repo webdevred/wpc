@@ -63,7 +63,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
         if (monitor->belongs_to_config) {
             ConfigMonitor *config_monitor =
                 &config->monitors_with_backgrounds[monitor->config_id];
-            config_monitor->image_path = strdup(wallpaper_path);
+            config_monitor->image_path = g_strdup(wallpaper_path);
             monitor->wallpaper = wallpaper;
         } else {
             ConfigMonitor *monitors = config->monitors_with_backgrounds;
@@ -79,9 +79,12 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
             config->monitors_with_backgrounds = new_list;
             ConfigMonitor *new_bmp = &new_list[number_of_monitors];
 
-            new_bmp->name = strdup(monitor_name);
-            new_bmp->image_path = strdup(wallpaper_path);
+            new_bmp->name = g_strdup(monitor_name);
+            new_bmp->image_path = g_strdup(wallpaper_path);
+            new_bmp->bg_fallback_color = g_strdup("");
+            new_bmp->valid_bg_fallback_color = g_strdup("");
 
+            monitor->belongs_to_config = true;
             monitor->config_id = number_of_monitors;
             monitor->wallpaper = wallpaper;
             config->number_of_monitors++;
@@ -352,10 +355,15 @@ static void choose_source_dir(GtkWidget *button, gpointer user_data) {
     GtkApplication *app = GTK_APPLICATION(user_data);
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
     GtkWindow *window = gtk_application_get_active_window(app);
-    GFile *initial_src_dir = g_file_new_for_path(config->source_directory);
     GtkFileDialog *dialog = gtk_file_dialog_new();
     dialog = gtk_file_dialog_new();
-    gtk_file_dialog_set_initial_folder(dialog, initial_src_dir);
+
+    if (config->source_directory &&
+        g_strcmp0(config->source_directory, "") != 0) {
+        GFile *initial_src_dir = g_file_new_for_path(config->source_directory);
+        gtk_file_dialog_set_initial_folder(dialog, initial_src_dir);
+    }
+
     gtk_file_dialog_select_folder(dialog, GTK_WINDOW(window), NULL,
                                   storage_dir_chosen, (gpointer)app);
     g_object_unref(dialog);
@@ -536,11 +544,14 @@ static void activate(GtkApplication *app, gpointer user_data) {
 
     gtk_widget_set_visible(window, true);
 
-    gchar css[] = ".wallpapers_flowbox image { min-width: 30em; min-height: 20em; margin: 0.1em; }";
+    gchar css[] = ".wallpapers_flowbox image { min-width: 30em; min-height: "
+                  "20em; margin: 0.1em; }";
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_string(provider, css);
-    GdkDisplay* display = gtk_widget_get_display(window);
-    gtk_style_context_add_provider_for_display(display, GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    GdkDisplay *display = gtk_widget_get_display(window);
+    gtk_style_context_add_provider_for_display(
+        display, GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 
 extern int initialize_application(int argc, char **argv) {

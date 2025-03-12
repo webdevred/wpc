@@ -83,7 +83,7 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
     }
 
     gchar *bg_fallback_color;
-    if (conf_bg_fb_color[0] == '\0') {
+    if (conf_bg_fb_color == NULL || conf_bg_fb_color[0] == '\0') {
         bg_fallback_color = g_strdup("#ff0000");
     } else {
         bg_fallback_color = g_strdup(conf_bg_fb_color);

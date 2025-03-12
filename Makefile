@@ -44,7 +44,7 @@ endif
 
 .PHONY: all clean install bc iwyu compile_commands
 
-all: $(TARGETS) bc
+all: $(TARGETS) bc compile_commands
 
 wpc: $(WPC_OBJS)
 	$(CC) $(WPC_OBJS) $(WPC_LDFLAGS) -o $@
@@ -76,7 +76,7 @@ iwyu:
 	done
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGETS) compile_commands.json
+	rm -rf $(BUILD_DIR) $(TARGETS)
 	$(MAKE) clean_bc
 
 clean_bc:

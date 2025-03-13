@@ -31,6 +31,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <wand/MagickWand.h>
 
 #include "rendering_region.h"
+#include "utils.h"
 #include "wallpaper.h"
 
 Display *disp = NULL;
@@ -83,7 +84,7 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
     }
 
     gchar *bg_fallback_color;
-    if (conf_bg_fb_color == NULL || conf_bg_fb_color[0] == '\0') {
+    if (is_empty_string(conf_bg_fb_color)) {
         bg_fallback_color = g_strdup("#ff0000");
     } else {
         bg_fallback_color = g_strdup(conf_bg_fb_color);

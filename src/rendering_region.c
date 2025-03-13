@@ -1,4 +1,5 @@
 #include "rendering_region.h"
+#include "structs.h"
 
 /*
  * Function: create_rendering_region

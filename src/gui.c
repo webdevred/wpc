@@ -6,6 +6,7 @@
 #include "filesystem.h"
 #include "gui.h"
 #include "monitors.h"
+#include "utils.h"
 #include "wallpaper.h"
 
 #ifdef WPC_ENABLE_HELPER
@@ -58,7 +59,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
             return;
         }
 
-        if (g_strcmp0(wallpaper->path, "") == 0) return;
+        if (is_empty_string(wallpaper->path)) return;
 
         if (monitor->belongs_to_config) {
             ConfigMonitor *config_monitor =
@@ -123,7 +124,7 @@ static void show_images_src_dir(GtkApplication *app) {
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
     char *source_directory = config->source_directory;
     GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
-    if (!flowbox || g_strcmp0(source_directory, "") == 0) return;
+    if (!flowbox || is_empty_string(source_directory)) return;
 
     ArrayWrapper *old_wp_arr_wrapper =
         g_object_get_data(G_OBJECT(app), "wallpapers");
@@ -271,9 +272,9 @@ static void show_images(GtkButton *button, GtkApplication *app) {
 
     flowbox = gtk_flow_box_new();
     gulong *handler = g_malloc(sizeof(gulong));
-    *handler = g_signal_connect_data(G_OBJECT(flowbox), "selected-children-changed",
-                                     G_CALLBACK(image_selected), (gpointer)app,
-                                     NULL, G_CONNECT_DEFAULT);
+    *handler = g_signal_connect_data(
+        G_OBJECT(flowbox), "selected-children-changed",
+        G_CALLBACK(image_selected), (gpointer)app, NULL, G_CONNECT_DEFAULT);
     g_object_set_data(G_OBJECT(flowbox), "handler", (gpointer)handler);
 
     gtk_widget_add_css_class(GTK_WIDGET(flowbox), "wallpapers_flowbox");
@@ -385,8 +386,7 @@ static void choose_source_dir(GtkWidget *button, gpointer user_data) {
     GtkFileDialog *dialog = gtk_file_dialog_new();
     dialog = gtk_file_dialog_new();
 
-    if (config->source_directory &&
-        g_strcmp0(config->source_directory, "") != 0) {
+    if (!is_empty_string(config->source_directory)) {
         GFile *initial_src_dir = g_file_new_for_path(config->source_directory);
         gtk_file_dialog_set_initial_folder(dialog, initial_src_dir);
     }

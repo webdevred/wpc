@@ -130,5 +130,7 @@ extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
         array_wrapper->amount_used = amount_used;
     }
 
+    XCloseDisplay(display);
+
     return array_wrapper;
 }

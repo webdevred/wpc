@@ -1,10 +1,12 @@
-#include "config.h"
-#include "structs.h"
 #include <cjson/cJSON.h>
 #include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "config.h"
+#include "structs.h"
+#include "utils.h"
 
 #define CONFIG_FILE ".config/wpc/settings.json"
 
@@ -98,7 +100,7 @@ extern void update_source_directory(Config *config, const gchar *new_src_dir) {
 
 static bool validate_bg_fallback(ConfigMonitor *config) {
     gchar *old_color = config->bg_fallback_color;
-    if (old_color == NULL || old_color[0] == '\0') goto invalidate;
+    if (is_empty_string(old_color)) goto invalidate;
 
     guint old_color_len = strlen(old_color);
     gchar new_color[8];
@@ -324,8 +326,7 @@ extern void dump_config(Config *config) {
         ConfigMonitor *monitor_background_pair =
             &config->monitors_with_backgrounds[i];
 
-        if (monitor_background_pair->bg_fallback_color &&
-            g_strcmp0(monitor_background_pair->bg_fallback_color, "") != 0) {
+        if (!is_empty_string(monitor_background_pair->bg_fallback_color)) {
             if (cJSON_AddStringToObject(
                     monitor_background_json, "bgFallbackColor",
                     monitor_background_pair->bg_fallback_color) == NULL) {

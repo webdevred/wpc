@@ -28,6 +28,7 @@ The program supports various image formats and makes it easy to change the wallp
 - Improve security for desktop manager helper
 - Implement support for other desktop manager than LightDM + lightdm-gtk-greeter
 - Implement caching of thumbnails for wallpapers in the UI
+- Implement tile background mode for lock screen
 
 * Installation
 

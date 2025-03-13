@@ -29,8 +29,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <wand/MagickWand.h>
+#include <wand/magick-image.h>
 
 #include "rendering_region.h"
+#include "structs.h"
 #include "utils.h"
 #include "wallpaper.h"
 
@@ -42,6 +44,12 @@ int depth;
 Atom wmDeleteWindow;
 XContext xid_context = 0;
 Window root = 0;
+
+#if IMAGEMAGICK_MAJOR_VERSION >= 7
+const char *pixel_format = "RGBA";
+#else
+const char *pixel_format = "BGRA";
+#endif
 
 void init_x(void) {
     init_disp(&disp, &root);
@@ -68,21 +76,78 @@ static void set_default_backgroud(gchar *bg_fallback, Monitor *monitor,
                    monitor->width, monitor->height);
 }
 
-static void set_bg_for_monitor(const gchar *wallpaper_path,
-                               gchar *conf_bg_fb_color, BgMode bg_mode, GC *gc,
-                               Monitor *monitor, Pixmap pmap) {
-    MagickWandGenesis();
+static void set_bg_for_monitor_tiled(MagickWand *wand, GC *gc, Monitor *monitor,
+                                     Pixmap pmap) {
+    guint i, j;
+    guint img_w = MagickGetImageWidth(wand);
+    guint img_h = MagickGetImageHeight(wand);
 
-    MagickStatusType status;
-    MagickWand *wand = NewMagickWand();
+    guint amount_x = (monitor->width + img_w - 1) / img_w;
+    guint amount_y = (monitor->height + img_h - 1) / img_h;
 
-    if (MagickReadImage(wand, wallpaper_path) == MagickFalse) {
-        DestroyMagickWand(wand);
-        MagickWandTerminus();
-        g_warning("Failed to read image: %s\n", wallpaper_path);
-        return;
+    guint output_width = amount_x * img_w;
+    guint output_height = amount_y * img_h;
+
+    MagickWand ***images = NULL;
+    PixelWand *color = NewPixelWand();
+    PixelSetColor(color, "none");
+
+    MagickWand *tiled_wand = NewMagickWand();
+    MagickNewImage(tiled_wand, output_width, output_height, color);
+
+    for (i = 0; i < amount_x; i++) {
+        images = realloc(images, (i + 1) * sizeof(MagickWand *));
+        images[i] = NULL;
+
+        for (j = 0; j < amount_y; j++) {
+            images[i] = realloc(images[i], (j + 1) * sizeof(MagickWand *));
+            images[i][j] = CloneMagickWand(wand);
+
+            MagickCompositeImage(tiled_wand, images[i][j], OverCompositeOp,
+                                 img_w * i, img_h * j);
+        }
     }
 
+    if (images != NULL) {
+        for (i = 0; i < amount_x; i++) {
+            if (images[i] != NULL) {
+                for (j = 0; j < amount_y; j++) {
+                    DestroyMagickWand(images[i][j]);
+                }
+                free(images[i]);
+            }
+        }
+        free(images);
+    }
+    DestroyPixelWand(color);
+
+    XGCValues gcval;
+
+    gcval.foreground = None;
+    *gc = XCreateGC(disp, root, GCForeground, &gcval);
+
+    unsigned char *pixels =
+        (unsigned char *)malloc(output_width * output_height * 4);
+
+    MagickExportImagePixels(tiled_wand, 0, 0, output_width, output_height,
+                            pixel_format, CharPixel, pixels);
+
+    XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
+                                  output_width, output_height, 32, 0);
+
+    XPutImage(disp, pmap, *gc, ximage, 0, 0, monitor->left_x, monitor->top_y, monitor->width,
+              monitor->height);
+
+    ximage->data = NULL;
+    XDestroyImage(ximage);
+    free(pixels);
+    pixels = NULL;
+}
+
+static void set_bg_for_monitor_non_tiled(MagickWand *wand,
+                                         gchar *conf_bg_fb_color,
+                                         BgMode bg_mode, GC *gc,
+                                         Monitor *monitor, Pixmap pmap) {
     gchar *bg_fallback_color;
     if (is_empty_string(conf_bg_fb_color)) {
         bg_fallback_color = g_strdup("#ff0000");
@@ -96,19 +161,9 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
 
     RenderingRegion *rr = create_rendering_region(wand, monitor, bg_mode);
 
-    status = MagickResizeImage(wand, rr->width, rr->height, LanczosFilter, 1.0);
-
-    if (status == MagickFalse) {
-        g_error("failed to scale image: %s", wallpaper_path);
-    }
+    MagickResizeImage(wand, rr->width, rr->height, LanczosFilter, 1.0);
 
     unsigned char *pixels = (unsigned char *)malloc(rr->width * rr->height * 4);
-
-#if IMAGEMAGICK_MAJOR_VERSION >= 7
-    const char *pixel_format = "RGBA";
-#else
-    const char *pixel_format = "BGRA";
-#endif
 
     MagickExportImagePixels(wand, 0, 0, rr->width, rr->height, pixel_format,
                             CharPixel, pixels);
@@ -125,6 +180,40 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
     pixels = NULL;
 
     XFreeGC(disp, *gc);
+}
+
+static void set_bg_for_monitor(const gchar *wallpaper_path,
+                               gchar *conf_bg_fb_color, BgMode bg_mode, GC *gc,
+                               Monitor *monitor, Pixmap pmap) {
+    MagickWandGenesis();
+
+    MagickWand *wand = NewMagickWand();
+
+    if (MagickReadImage(wand, wallpaper_path) == MagickFalse) {
+        DestroyMagickWand(wand);
+        MagickWandTerminus();
+        g_warning("Failed to read image: %s\n", wallpaper_path);
+        return;
+    }
+
+    guint img_w = MagickGetImageWidth(wand);
+    guint img_h = MagickGetImageHeight(wand);
+
+    if (bg_mode == BG_MODE_TILE) {
+        if (img_w <= monitor->width && img_h <= monitor->height) {
+            set_bg_for_monitor_tiled(wand, gc, monitor, pmap);
+        } else {
+            g_warning("image %s too big for monitor %s with BG_MODE_TILE, "
+                      "using BG_MODE_FILL instead",
+                      wallpaper_path, monitor->name);
+            set_bg_for_monitor_non_tiled(wand, conf_bg_fb_color, BG_MODE_FILL, gc,
+                                         monitor, pmap);
+        }
+    } else {
+        set_bg_for_monitor_non_tiled(wand, conf_bg_fb_color, bg_mode, gc,
+                                     monitor, pmap);
+    }
+
     DestroyMagickWand(wand);
     MagickWandTerminus();
     return;

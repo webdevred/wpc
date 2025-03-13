@@ -107,11 +107,24 @@ static gint sort_flow_images(GtkFlowBoxChild *child1, GtkFlowBoxChild *child2,
     return g_strcmp0(image_path1, image_path2);
 }
 
+static void widget_block_handler(GtkWidget *widget) {
+    gulong *handler = g_object_get_data(G_OBJECT(widget), "handler");
+    if (handler) {
+        g_signal_handler_block(G_OBJECT(widget), *handler);
+    }
+}
+
+static void widget_unblock_handler(GtkWidget *widget) {
+    gulong *handler = g_object_get_data(G_OBJECT(widget), "handler");
+    g_signal_handler_unblock(G_OBJECT(widget), *handler);
+}
+
 static void show_images_src_dir(GtkApplication *app) {
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
     char *source_directory = config->source_directory;
     GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
     if (!flowbox || g_strcmp0(source_directory, "") == 0) return;
+
     ArrayWrapper *old_wp_arr_wrapper =
         g_object_get_data(G_OBJECT(app), "wallpapers");
     if (old_wp_arr_wrapper) {
@@ -121,6 +134,9 @@ static void show_images_src_dir(GtkApplication *app) {
 
     GtkAdjustment *adjustment = gtk_adjustment_new(0, 0, 100, 1, 10, 0);
     gtk_flow_box_set_vadjustment(GTK_FLOW_BOX(flowbox), adjustment);
+
+    widget_block_handler(flowbox);
+
     gtk_flow_box_remove_all(GTK_FLOW_BOX(flowbox));
 
     ArrayWrapper *wp_arr_wrapper = list_wallpapers(source_directory);
@@ -163,6 +179,8 @@ static void show_images_src_dir(GtkApplication *app) {
     } else {
         g_print("No images found in %s\n", source_directory);
     }
+
+    widget_unblock_handler(flowbox);
 }
 
 static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
@@ -237,7 +255,9 @@ static void show_images(GtkButton *button, GtkApplication *app) {
         bg_mode = config_monitor->bg_mode;
     }
 
+    widget_block_handler(bg_mode_dropdown);
     gtk_drop_down_set_selected(GTK_DROP_DOWN(bg_mode_dropdown), bg_mode);
+    widget_unblock_handler(bg_mode_dropdown);
 
     GtkWidget *flowbox;
     flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
@@ -250,20 +270,25 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     gtk_box_append(GTK_BOX(vbox), scrolled_window);
 
     flowbox = gtk_flow_box_new();
+    gulong *handler = g_malloc(sizeof(gulong));
+    *handler = g_signal_connect_data(G_OBJECT(flowbox), "selected-children-changed",
+                                     G_CALLBACK(image_selected), (gpointer)app,
+                                     NULL, G_CONNECT_DEFAULT);
+    g_object_set_data(G_OBJECT(flowbox), "handler", (gpointer)handler);
+
     gtk_widget_add_css_class(GTK_WIDGET(flowbox), "wallpapers_flowbox");
     gtk_widget_set_vexpand(GTK_WIDGET(flowbox), true);
     g_object_set_data(G_OBJECT(app), "flowbox", flowbox);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window),
                                   flowbox);
 
-    g_signal_connect(flowbox, "selected-children-changed",
-                     G_CALLBACK(image_selected), app);
-
     gtk_widget_set_visible(scrolled_window, true);
     gtk_widget_set_visible(flowbox, true);
     show_images_src_dir(app);
 
 update_selection:
+    widget_block_handler(flowbox);
+
     if (*menu_choice == WM_BACKGROUND && monitor->wallpaper) {
         GtkFlowBoxChild *flow_child =
             GTK_FLOW_BOX_CHILD(monitor->wallpaper->flow_child);
@@ -271,6 +296,8 @@ update_selection:
     } else {
         gtk_flow_box_unselect_all(GTK_FLOW_BOX(flowbox));
     }
+
+    widget_unblock_handler(flowbox);
 }
 
 static void show_monitors(GtkApplication *app) {
@@ -415,8 +442,24 @@ static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
         g_object_set_data(G_OBJECT(app), "wallpapers", NULL);
     }
 
+    GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
+    gulong *flowbox_handler = g_object_get_data(G_OBJECT(flowbox), "handler");
+    if (flowbox_handler) {
+        g_signal_handler_disconnect(G_OBJECT(flowbox), *flowbox_handler);
+        g_free(flowbox_handler);
+    }
+
     GtkWidget *bg_mode_dropdown =
         g_object_steal_data(G_OBJECT(app), "bg_mode_dropdown");
+
+    gulong *bg_mode_handler =
+        g_object_get_data(G_OBJECT(bg_mode_dropdown), "handler");
+    if (bg_mode_handler) {
+        g_signal_handler_disconnect(G_OBJECT(bg_mode_dropdown),
+                                    *bg_mode_handler);
+        g_free(bg_mode_handler);
+    }
+
     gtk_widget_unparent(bg_mode_dropdown);
     g_object_set_data(G_OBJECT(app), "bg_mode_options", NULL);
 
@@ -530,10 +573,15 @@ static void activate(GtkApplication *app, gpointer user_data) {
 
     GtkWidget *dropdown = gtk_drop_down_new(G_LIST_MODEL(string_list), NULL);
     gtk_drop_down_set_selected(GTK_DROP_DOWN(dropdown), 0);
+
+    gulong *handler = g_malloc(sizeof(gulong));
+    *handler = g_signal_connect_data(G_OBJECT(dropdown), "notify::selected",
+                                     G_CALLBACK(on_option_selected),
+                                     (gpointer)app, NULL, G_CONNECT_DEFAULT);
+    g_object_set_data(G_OBJECT(dropdown), "handler", (gpointer)handler);
+
     gtk_widget_set_visible(GTK_WIDGET(dropdown), false);
     gtk_box_append(GTK_BOX(menu_box), dropdown);
-    g_signal_connect(dropdown, "notify::selected",
-                     G_CALLBACK(on_option_selected), (gpointer)app);
     g_object_set_data(G_OBJECT(app), "bg_mode_dropdown", dropdown);
 
     GtkWidget *status_selected_monitor = gtk_label_new("");

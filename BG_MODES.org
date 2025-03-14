@@ -14,11 +14,11 @@ The image is displayed at its original size and centered on the screen. If the i
 
 The image is scaled proportionally to fill the monitor in one dimension (either width or height) while maintaining its aspect ratio and the image is centered.
 
-** Tile (Not Fully Implemented):
+** Tile:
 
 In tile mode, the image is intended to be repeatedly drawn across the entire screen without scaling or resizing. This would ensure that the background is completely covered by multiple copies of the image, aligned in a grid pattern. If the image is smaller than the screen, it would be duplicated both horizontally and vertically until the entire display is filled.
 
-Unlike other modes, tile mode does not distort or crop the image—it simply repeats it as many times as necessary. However, this functionality is not yet fully implemented in the current version.
+Unlike other modes, tile mode does not distort or crop the image—it simply repeats it as many times as necessary.
 
 ** Fill (Default Mode):
 

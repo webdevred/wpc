@@ -3,7 +3,6 @@
 #include <glib.h>
 
 #include "monitors.h"
-#include "structs.h"
 
 static void get_screen_resources(Display **disp, Window *root,
                                  XRRScreenResources **screen_resources) {
@@ -25,7 +24,7 @@ extern void init_disp(Display **disp, Window *root) {
     *root = DefaultRootWindow(*disp);
 }
 
-extern void free_monitors(ArrayWrapper *arr) {
+extern void free_monitors(MonitorArray *arr) {
     Monitor *monitors = (Monitor *)arr->data;
     for (unsigned int i = 0; i < arr->amount_used; i++) {
         free(monitors[i].name);
@@ -34,8 +33,8 @@ extern void free_monitors(ArrayWrapper *arr) {
     free(arr);
 }
 
-extern ArrayWrapper *list_monitors(const bool virtual_monitors) {
-    ArrayWrapper *array_wrapper = malloc(sizeof(ArrayWrapper));
+extern MonitorArray *list_monitors(const bool virtual_monitors) {
+    MonitorArray *array_wrapper = malloc(sizeof(MonitorArray));
     if (!array_wrapper) {
         return NULL;
     }

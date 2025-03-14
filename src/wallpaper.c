@@ -1,29 +1,3 @@
-/* wallpaper.c
-
-Copyright (C) 1999-2003 Tom Gilbert.
-Copyright (C) 2010-2020 Birte Kristina Friesel.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to
-deal in the Software without restriction, including without limitation the
-rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-sell copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies of the Software and its documentation and acknowledgment shall be
-given in the documentation and software packages that this Software was
-used.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-*/
-
 #include "monitors.h"
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -31,10 +5,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <wand/MagickWand.h>
 #include <wand/magick-image.h>
 
-#include "rendering_region.h"
-#include "structs.h"
-#include "utils.h"
 #include "wallpaper.h"
+#include "wallpaper_transformation.h"
 
 Display *disp = NULL;
 Visual *vis = NULL;
@@ -63,108 +35,6 @@ void init_x(void) {
     return;
 }
 
-static void set_default_backgroud(gchar *bg_fallback, Monitor *monitor,
-                                  Pixmap pmap, GC *gc) {
-    XGCValues gcval;
-    XColor color;
-    Colormap cmap = DefaultColormap(disp, DefaultScreen(disp));
-
-    XAllocNamedColor(disp, cmap, bg_fallback, &color, &color);
-    gcval.foreground = color.pixel;
-    *gc = XCreateGC(disp, root, GCForeground, &gcval);
-    XFillRectangle(disp, pmap, *gc, monitor->left_x, monitor->top_y,
-                   monitor->width, monitor->height);
-}
-
-static void set_bg_for_monitor_tiled(MagickWand *wand, GC *gc, Monitor *monitor,
-                                     Pixmap pmap) {
-    guint i, j;
-    guint img_w = MagickGetImageWidth(wand);
-    guint img_h = MagickGetImageHeight(wand);
-
-    guint amount_x = (monitor->width + img_w - 1) / img_w;
-    guint amount_y = (monitor->height + img_h - 1) / img_h;
-
-    guint output_width = amount_x * img_w;
-    guint output_height = amount_y * img_h;
-
-    PixelWand *color = NewPixelWand();
-    PixelSetColor(color, "none");
-
-    MagickWand *tiled_wand = NewMagickWand();
-    MagickNewImage(tiled_wand, output_width, output_height, color);
-
-    for (i = 0; i < amount_x; i++) {
-        for (j = 0; j < amount_y; j++) {
-            MagickCompositeImage(tiled_wand, wand, OverCompositeOp,
-                                 img_w * i, img_h * j);
-        }
-    }
-
-    DestroyPixelWand(color);
-
-    XGCValues gcval;
-
-    gcval.foreground = None;
-    *gc = XCreateGC(disp, root, GCForeground, &gcval);
-
-    unsigned char *pixels =
-        (unsigned char *)malloc(output_width * output_height * 4);
-
-    MagickExportImagePixels(tiled_wand, 0, 0, output_width, output_height,
-                            pixel_format, CharPixel, pixels);
-
-    DestroyMagickWand(tiled_wand);
-    XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
-                                  output_width, output_height, 32, 0);
-
-    XPutImage(disp, pmap, *gc, ximage, 0, 0, monitor->left_x, monitor->top_y,
-              monitor->width, monitor->height);
-
-    ximage->data = NULL;
-    XDestroyImage(ximage);
-    free(pixels);
-    pixels = NULL;
-}
-
-static void set_bg_for_monitor_non_tiled(MagickWand *wand,
-                                         gchar *conf_bg_fb_color,
-                                         BgMode bg_mode, GC *gc,
-                                         Monitor *monitor, Pixmap pmap) {
-    gchar *bg_fallback_color;
-    if (is_empty_string(conf_bg_fb_color)) {
-        bg_fallback_color = g_strdup("#ff0000");
-    } else {
-        bg_fallback_color = g_strdup(conf_bg_fb_color);
-    }
-
-    set_default_backgroud(bg_fallback_color, monitor, pmap, gc);
-
-    g_free(bg_fallback_color);
-
-    RenderingRegion *rr = create_rendering_region(wand, monitor, bg_mode);
-
-    MagickResizeImage(wand, rr->width, rr->height, LanczosFilter, 1.0);
-
-    unsigned char *pixels = (unsigned char *)malloc(rr->width * rr->height * 4);
-
-    MagickExportImagePixels(wand, 0, 0, rr->width, rr->height, pixel_format,
-                            CharPixel, pixels);
-    XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
-                                  rr->width, rr->height, 32, 0);
-    XPutImage(disp, pmap, *gc, ximage, rr->src_x, rr->src_y, rr->monitor_x,
-              rr->monitor_y, rr->width, rr->height);
-
-    free(rr);
-
-    ximage->data = NULL;
-    XDestroyImage(ximage);
-    free(pixels);
-    pixels = NULL;
-
-    XFreeGC(disp, *gc);
-}
-
 static void set_bg_for_monitor(const gchar *wallpaper_path,
                                gchar *conf_bg_fb_color, BgMode bg_mode, GC *gc,
                                Monitor *monitor, Pixmap pmap) {
@@ -179,30 +49,38 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
         return;
     }
 
-    guint img_w = MagickGetImageWidth(wand);
-    guint img_h = MagickGetImageHeight(wand);
-
-    if (bg_mode == BG_MODE_TILE) {
-        if (img_w <= monitor->width && img_h <= monitor->height) {
-            set_bg_for_monitor_tiled(wand, gc, monitor, pmap);
-        } else {
-            g_warning("image %s too big for monitor %s with BG_MODE_TILE, "
-                      "using BG_MODE_FILL instead",
-                      wallpaper_path, monitor->name);
-            set_bg_for_monitor_non_tiled(wand, conf_bg_fb_color, BG_MODE_FILL,
-                                         gc, monitor, pmap);
-        }
-    } else {
-        set_bg_for_monitor_non_tiled(wand, conf_bg_fb_color, bg_mode, gc,
-                                     monitor, pmap);
+    if (bg_mode != BG_MODE_TILE || !transform_wallpaper_tiled(&wand, monitor)) {
+        transform_wallpaper(&wand, monitor, bg_mode, conf_bg_fb_color);
     }
+
+    unsigned char *pixels =
+        (unsigned char *)malloc(monitor->width * monitor->height * 4);
+
+    MagickExportImagePixels(wand, 0, 0, monitor->width, monitor->height,
+                            pixel_format, CharPixel, pixels);
+    XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
+                                  monitor->width, monitor->height, 32, 0);
+
+    XGCValues gcval;
+    gcval.foreground = None;
+    *gc = XCreateGC(disp, root, GCForeground, &gcval);
+
+    XPutImage(disp, pmap, *gc, ximage, 0, 0, monitor->left_x, monitor->top_y,
+              monitor->width, monitor->height);
+
+    ximage->data = NULL;
+    XDestroyImage(ximage);
+    free(pixels);
+    pixels = NULL;
+
+    XFreeGC(disp, *gc);
 
     DestroyMagickWand(wand);
     MagickWandTerminus();
     return;
 }
 
-static void feh_wm_set_bg(Config *config) {
+static void wm_set_bg(Config *config) {
     GC gc;
     XGCValues gcvalues;
 
@@ -217,7 +95,7 @@ static void feh_wm_set_bg(Config *config) {
     gushort depth2;
 
     pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
-    ArrayWrapper *mon_arr_wrapper = list_monitors(false);
+    MonitorArray *mon_arr_wrapper = list_monitors(true);
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
     gushort m;
     ConfigMonitor *monitor_bgs = config->monitors_with_backgrounds;
@@ -317,5 +195,5 @@ static void feh_wm_set_bg(Config *config) {
 
 extern void set_wallpapers(Config *config) {
     init_x();
-    feh_wm_set_bg(config);
+    wm_set_bg(config);
 }

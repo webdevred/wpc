@@ -11,7 +11,7 @@
 #define DM_CONFIG_PAYLOAD
 #include "common.h"
 #include "lightdm.h"
-#include "rendering_region.h"
+#include "wallpaper_transformation.h"
 
 static void format_dst_filename(gchar **dst_filename) {
     gchar *str = *dst_filename;
@@ -59,50 +59,21 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path,
         exit(-1);                                                              \
     }
 
-    MagickWand *wallpaper_wand = NULL;
-    PixelWand *color = NULL;
-    MagickWand *output_wand = NULL;
-    MagickBooleanType status;
+    MagickWand *wand = NULL;
 
     MagickWandGenesis();
 
-    wallpaper_wand = NewMagickWand();
-    status = MagickReadImage(wallpaper_wand, src_image->path);
-    if (status == MagickFalse) ThrowWandException(wallpaper_wand);
+    wand = NewMagickWand();
+    MagickReadImage(wand, src_image->path);
 
-    monitor.left_x = 0;
-    monitor.top_y = 0;
+    if (bg_mode != BG_MODE_TILE ||
+        !transform_wallpaper_tiled(&wand, &monitor)) {
+        transform_wallpaper(&wand, &monitor, bg_mode, NULL);
+    }
 
-    RenderingRegion *rr =
-        create_rendering_region(wallpaper_wand, &monitor, bg_mode);
+    MagickWriteImages(wand, dst_image_path, MagickTrue);
 
-    status = MagickResizeImage(wallpaper_wand, rr->width, rr->height,
-                               LanczosFilter, 1.0);
-    if (status == MagickFalse) ThrowWandException(wallpaper_wand);
-
-    status = MagickCropImage(wallpaper_wand, rr->width, rr->height, rr->src_x,
-                             rr->src_y);
-    if (status == MagickFalse) ThrowWandException(wallpaper_wand);
-
-    color = NewPixelWand();
-    PixelSetColor(color, "#ff0000");
-
-    output_wand = NewMagickWand();
-    status = MagickNewImage(output_wand, monitor.width, monitor.height, color);
-    if (status == MagickFalse) ThrowWandException(output_wand);
-
-    status = MagickCompositeImage(output_wand, wallpaper_wand, OverCompositeOp,
-                                  rr->monitor_x, rr->monitor_y);
-    if (status == MagickFalse) ThrowWandException(output_wand);
-
-    status = MagickWriteImages(output_wand, dst_image_path, MagickTrue);
-    if (status == MagickFalse) ThrowWandException(output_wand);
-
-    free(rr);
-
-    output_wand = DestroyMagickWand(output_wand);
-    wallpaper_wand = DestroyMagickWand(wallpaper_wand);
-    color = DestroyPixelWand(color);
+    wand = DestroyMagickWand(wand);
 
     MagickWandTerminus();
     return 0;

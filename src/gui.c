@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "config.h"
 #include "filesystem.h"
 #include "gui.h"
 #include "monitors.h"
-#include "utils.h"
 #include "wallpaper.h"
 
 #ifdef WPC_ENABLE_HELPER
@@ -21,7 +21,20 @@ static Wallpaper *get_flow_child_wallpaper(GtkFlowBoxChild *flow_child) {
     return wallpaper;
 }
 
+static void widget_block_handler(GtkWidget *widget) {
+    gulong *handler = g_object_get_data(G_OBJECT(widget), "handler");
+    if (handler) {
+        g_signal_handler_block(G_OBJECT(widget), *handler);
+    }
+}
+
+static void widget_unblock_handler(GtkWidget *widget) {
+    gulong *handler = g_object_get_data(G_OBJECT(widget), "handler");
+    g_signal_handler_unblock(G_OBJECT(widget), *handler);
+}
+
 static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
+    widget_block_handler(GTK_WIDGET(flowbox));
     GtkApplication *app = GTK_APPLICATION(user_data);
     Monitor *monitor = g_object_get_data(G_OBJECT(app), "selected_monitor");
 
@@ -43,11 +56,12 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
     AppTab *menu_choice =
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
 
+    GtkWidget *bg_mode_dropdown =
+        g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
+    guint selected_index =
+        gtk_drop_down_get_selected(GTK_DROP_DOWN(bg_mode_dropdown));
+
     if (*menu_choice == DM_BACKGROUND) {
-        GtkWidget *bg_mode_dropdown =
-            g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
-        guint selected_index =
-            gtk_drop_down_get_selected(GTK_DROP_DOWN(bg_mode_dropdown));
         lightdm_set_background(wallpaper, monitor, selected_index);
     } else {
 #endif
@@ -59,31 +73,16 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
             return;
         }
 
-        if (is_empty_string(wallpaper->path)) return;
-
         if (monitor->belongs_to_config) {
             ConfigMonitor *config_monitor =
                 &config->monitors_with_backgrounds[monitor->config_id];
             config_monitor->image_path = g_strdup(wallpaper_path);
             monitor->wallpaper = wallpaper;
         } else {
-            ConfigMonitor *monitors = config->monitors_with_backgrounds;
             int number_of_monitors = config->number_of_monitors;
 
-            ConfigMonitor *new_list = realloc(
-                monitors, (number_of_monitors + 1) * sizeof(ConfigMonitor));
-            if (!new_list) {
-                fprintf(stderr, "Error: Memory allocation failed.\n");
-                return;
-            }
-
-            config->monitors_with_backgrounds = new_list;
-            ConfigMonitor *new_bmp = &new_list[number_of_monitors];
-
-            new_bmp->name = g_strdup(monitor_name);
-            new_bmp->image_path = g_strdup(wallpaper_path);
-            new_bmp->bg_fallback_color = g_strdup("");
-            new_bmp->valid_bg_fallback_color = g_strdup("");
+            init_config_monitor(config, monitor_name, wallpaper_path,
+                                selected_index);
 
             monitor->belongs_to_config = true;
             monitor->config_id = number_of_monitors;
@@ -95,6 +94,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
 #ifdef WPC_ENABLE_HELPER
     }
 #endif
+    widget_unblock_handler(GTK_WIDGET(flowbox));
 }
 
 static gint sort_flow_images(GtkFlowBoxChild *child1, GtkFlowBoxChild *child2,
@@ -108,25 +108,13 @@ static gint sort_flow_images(GtkFlowBoxChild *child1, GtkFlowBoxChild *child2,
     return g_strcmp0(image_path1, image_path2);
 }
 
-static void widget_block_handler(GtkWidget *widget) {
-    gulong *handler = g_object_get_data(G_OBJECT(widget), "handler");
-    if (handler) {
-        g_signal_handler_block(G_OBJECT(widget), *handler);
-    }
-}
-
-static void widget_unblock_handler(GtkWidget *widget) {
-    gulong *handler = g_object_get_data(G_OBJECT(widget), "handler");
-    g_signal_handler_unblock(G_OBJECT(widget), *handler);
-}
-
 static void show_images_src_dir(GtkApplication *app) {
     Config *config = g_object_get_data(G_OBJECT(app), "configuration");
     char *source_directory = config->source_directory;
     GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
-    if (!flowbox || is_empty_string(source_directory)) return;
+    if (!flowbox || !config->valid_source_directory) return;
 
-    ArrayWrapper *old_wp_arr_wrapper =
+    WallpaperArray *old_wp_arr_wrapper =
         g_object_get_data(G_OBJECT(app), "wallpapers");
     if (old_wp_arr_wrapper) {
         free_wallpapers(old_wp_arr_wrapper);
@@ -140,11 +128,11 @@ static void show_images_src_dir(GtkApplication *app) {
 
     gtk_flow_box_remove_all(GTK_FLOW_BOX(flowbox));
 
-    ArrayWrapper *wp_arr_wrapper = list_wallpapers(source_directory);
+    WallpaperArray *wp_arr_wrapper = list_wallpapers(source_directory);
     if (!wp_arr_wrapper) return;
     Wallpaper *wallpapers = (Wallpaper *)wp_arr_wrapper->data;
 
-    ArrayWrapper *mon_wrap = g_object_get_data(G_OBJECT(app), "monitors");
+    WallpaperArray *mon_wrap = g_object_get_data(G_OBJECT(app), "monitors");
     Monitor *monitors = (Monitor *)mon_wrap->data;
     gushort monitor_id;
     if (wallpapers) {
@@ -291,7 +279,8 @@ static void show_images(GtkButton *button, GtkApplication *app) {
 update_selection:
     widget_block_handler(flowbox);
 
-    if (*menu_choice == WM_BACKGROUND && monitor->wallpaper) {
+    if (*menu_choice == WM_BACKGROUND && monitor->wallpaper &&
+        monitor->wallpaper->flow_child) {
         GtkFlowBoxChild *flow_child =
             GTK_FLOW_BOX_CHILD(monitor->wallpaper->flow_child);
         gtk_flow_box_select_child(GTK_FLOW_BOX(flowbox), flow_child);
@@ -387,7 +376,7 @@ static void choose_source_dir(GtkWidget *button, gpointer user_data) {
     GtkFileDialog *dialog = gtk_file_dialog_new();
     dialog = gtk_file_dialog_new();
 
-    if (!is_empty_string(config->source_directory)) {
+    if (config->valid_source_directory) {
         GFile *initial_src_dir = g_file_new_for_path(config->source_directory);
         gtk_file_dialog_set_initial_folder(dialog, initial_src_dir);
     }
@@ -428,14 +417,14 @@ static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
         g_object_set_data(G_OBJECT(app), "configuration", NULL);
     }
 
-    ArrayWrapper *mon_arr_wrapper =
+    MonitorArray *mon_arr_wrapper =
         g_object_get_data(G_OBJECT(app), "monitors");
     if (mon_arr_wrapper) {
         free_monitors(mon_arr_wrapper);
         g_object_set_data(G_OBJECT(app), "monitors", NULL);
     }
 
-    ArrayWrapper *wp_arr_wrapper =
+    WallpaperArray *wp_arr_wrapper =
         g_object_get_data(G_OBJECT(app), "wallpapers");
     if (wp_arr_wrapper) {
         free_wallpapers(wp_arr_wrapper);
@@ -444,8 +433,9 @@ static gboolean on_window_close(GtkWindow *window, gpointer user_data) {
     }
 
     GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
-    gulong *flowbox_handler = g_object_get_data(G_OBJECT(flowbox), "handler");
-    if (flowbox_handler) {
+    gulong *flowbox_handler;
+    if (flowbox &&
+        (flowbox_handler = g_object_get_data(G_OBJECT(flowbox), "handler"))) {
         g_signal_handler_disconnect(G_OBJECT(flowbox), *flowbox_handler);
         g_free(flowbox_handler);
     }
@@ -514,7 +504,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
     g_object_set_data(G_OBJECT(app), "monitors_box", monitors_box);
     gtk_widget_set_visible(GTK_WIDGET(monitors_box), false);
 
-    ArrayWrapper *mon_arr_wrapper = list_monitors(true);
+    MonitorArray *mon_arr_wrapper = list_monitors(true);
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
 
     gushort monitor_id;
@@ -594,7 +584,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
     gtk_widget_set_visible(window, true);
 
     gchar css[] = ".wallpapers_flowbox image { min-width: 30em; min-height: "
-                  "20em; margin: 0.1em; }";
+                  "25em; margin: 0.1em; }";
     GtkCssProvider *provider = gtk_css_provider_new();
     gtk_css_provider_load_from_string(provider, css);
     GdkDisplay *display = gtk_widget_get_display(window);

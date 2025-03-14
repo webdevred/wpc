@@ -49,7 +49,7 @@ static bool set_width_and_height(Wallpaper *wallpaper) {
     return true;
 }
 
-extern void free_wallpapers(ArrayWrapper *arr) {
+extern void free_wallpapers(WallpaperArray *arr) {
     Wallpaper *wallpapers = (Wallpaper *)arr->data;
     unsigned int i;
     for (i = 0; i < arr->amount_used; i++) {
@@ -59,7 +59,7 @@ extern void free_wallpapers(ArrayWrapper *arr) {
     free(arr);
 }
 
-extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
+extern WallpaperArray *list_wallpapers(gchar *source_directory) {
     DIR *dir = opendir(source_directory);
     if (!dir) {
         closedir(dir);
@@ -67,7 +67,7 @@ extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
         return NULL;
     }
 
-    ArrayWrapper *array_wrapper = malloc(sizeof(ArrayWrapper));
+    WallpaperArray *array_wrapper = malloc(sizeof(WallpaperArray));
     if (!array_wrapper) {
         closedir(dir);
         return NULL;

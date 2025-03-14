@@ -5,17 +5,31 @@
 #include <string.h>
 
 #include "config.h"
-#include "structs.h"
-#include "utils.h"
 
 #define CONFIG_FILE ".config/wpc/settings.json"
+
+static bool is_empty_string(const gchar *string_ptr) {
+    return string_ptr == NULL || g_strcmp0(string_ptr, "") == 0;
+}
+
+static bool validate_src_dir(const gchar *source_directory) {
+    if (is_empty_string(source_directory)) return false;
+    GDir *dir = g_dir_open(source_directory, 0, NULL);
+    gboolean valid = false;
+    if (dir) {
+        valid = true;
+        g_dir_close(dir);
+    }
+
+    return valid;
+}
 
 static gchar *get_config_file() {
     const gchar *home = g_get_home_dir();
     return g_strdup_printf("%s/%s", home, CONFIG_FILE);
 }
 
-static void free_monitor_background_pair(ConfigMonitor *pair) {
+static void free_config_monitor(ConfigMonitor *pair) {
     if (!pair) return;
 
     if (pair->bg_fallback_color) {
@@ -38,23 +52,7 @@ static void free_monitor_background_pair(ConfigMonitor *pair) {
     }
 }
 
-extern void free_config(Config *config) {
-    if (!config) return;
-
-    free(config->source_directory);
-    if (config->monitors_with_backgrounds) {
-        for (int i = 0; i < config->number_of_monitors; i++) {
-            free_monitor_background_pair(&config->monitors_with_backgrounds[i]);
-        }
-        free(config->monitors_with_backgrounds);
-        config->monitors_with_backgrounds = NULL;
-    }
-
-    free(config);
-    config = NULL;
-}
-
-const gchar *bg_mode_to_string(BgMode type) {
+static const gchar *bg_mode_to_string(BgMode type) {
     switch (type) {
     case BG_MODE_TILE:
         return "TILE";
@@ -71,7 +69,7 @@ const gchar *bg_mode_to_string(BgMode type) {
     }
 }
 
-BgMode bg_mode_from_string(const gchar *str) {
+static BgMode bg_mode_from_string(const gchar *str) {
     if (strcmp(str, "TILE") == 0)
         return BG_MODE_TILE;
     else if (strcmp(str, "CENTER") == 0)
@@ -93,9 +91,28 @@ static void get_xdg_pictures_dir(Config *config) {
     config->source_directory = g_strdup(xdg_pictures_dir);
 }
 
-extern void update_source_directory(Config *config, const gchar *new_src_dir) {
+extern void free_config(Config *config) {
+    if (!config) return;
+
     free(config->source_directory);
-    config->source_directory = g_strdup(new_src_dir);
+    if (config->monitors_with_backgrounds) {
+        for (int i = 0; i < config->number_of_monitors; i++) {
+            free_config_monitor(&config->monitors_with_backgrounds[i]);
+        }
+        free(config->monitors_with_backgrounds);
+        config->monitors_with_backgrounds = NULL;
+    }
+
+    free(config);
+    config = NULL;
+}
+
+extern void update_source_directory(Config *config, const gchar *new_src_dir) {
+    if(validate_src_dir(new_src_dir)) {
+      free(config->source_directory);
+      config->source_directory = g_strdup(new_src_dir);
+      config->valid_source_directory = true;
+    }
 }
 
 static bool validate_bg_fallback(ConfigMonitor *config) {
@@ -140,8 +157,31 @@ warn:
     g_warning("invalid fallback_bg: %s", old_color);
 
 invalidate:
-    config->valid_bg_fallback_color = g_strdup("");
+    config->valid_bg_fallback_color = g_strdup("#ff0000");
     return false;
+}
+
+extern void init_config_monitor(Config *config, const gchar *monitor_name,
+                                const gchar *wallpaper_path,
+                                const BgMode bg_mode) {
+    ConfigMonitor *monitors = config->monitors_with_backgrounds;
+    guint amount = config->number_of_monitors;
+
+    ConfigMonitor *new_monitors =
+        realloc(monitors, (amount + 1) * sizeof(ConfigMonitor));
+    if (!new_monitors) {
+        g_warning("Error: Memory allocation failed.\n");
+        return;
+    }
+
+    config->monitors_with_backgrounds = new_monitors;
+    ConfigMonitor *new_monitor = &new_monitors[amount];
+
+    new_monitor->name = g_strdup(monitor_name);
+    new_monitor->image_path = g_strdup(wallpaper_path);
+    new_monitor->bg_mode = bg_mode;
+    new_monitor->bg_fallback_color = g_strdup("");
+    new_monitor->valid_bg_fallback_color = g_strdup("");
 }
 
 extern Config *load_config() {
@@ -160,6 +200,8 @@ extern Config *load_config() {
 
     if (file == NULL) {
         get_xdg_pictures_dir(config);
+        config->valid_source_directory =
+            validate_src_dir(config->source_directory) ? true : false;
         return config;
     }
 
@@ -211,6 +253,9 @@ extern Config *load_config() {
     } else {
         get_xdg_pictures_dir(config);
     }
+
+    config->valid_source_directory =
+        validate_src_dir(config->source_directory) ? true : false;
 
     cJSON *monitors_json = cJSON_GetObjectItemCaseSensitive(
         settings_json, "monitorsWithBackgrounds");

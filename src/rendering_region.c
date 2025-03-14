@@ -1,5 +1,5 @@
 #include "rendering_region.h"
-#include "structs.h"
+#include "wand/MagickWand.h"
 
 /*
  * Function: create_rendering_region
@@ -10,8 +10,7 @@
  *
  * Parameters:
  *   - wand: Pointer to the MagickWand containing the image.
- *   - monitor: Pointer to the Monitor struct with monitor dimensions and
- * position.
+ *   - monitor: Pointer to the Monitor struct with monitor dimensions.
  *   - bg_mode: Specifies how the image should be rendered. Please see
  * BG_MODES.org for explanation for information.
  *
@@ -21,18 +20,16 @@
  */
 extern RenderingRegion *
 create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
+    RenderingRegion *rr = malloc(sizeof(RenderingRegion));
+
     size_t img_w, img_h;
 
     gushort mon_w = monitor->width;
     gushort mon_h = monitor->height;
-    gshort mon_x = monitor->left_x;
-    gshort mon_y = monitor->top_y;
 
     bool border_x, cut_x;
     gushort scaled_w, scaled_h;
     gushort margin_x, margin_y;
-
-    RenderingRegion *rr = malloc(sizeof(RenderingRegion));
 
     img_w = MagickGetImageWidth(wand);
     img_h = MagickGetImageHeight(wand);
@@ -41,6 +38,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
        switch to BG_MODE_MAX to scale the image proportionally.*/
     if (bg_mode == BG_MODE_CENTER && (img_h > mon_h || img_w > mon_w)) {
         bg_mode = BG_MODE_MAX;
+    } else if (bg_mode == BG_MODE_TILE) {
+        bg_mode = BG_MODE_FILL;
     }
 
     // Determine the rendering region based on the selected background mode
@@ -49,8 +48,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         // BG_MODE_SCALE: Stretch the image to completely fill the monitor.
         rr->src_x = 0;
         rr->src_y = 0;
-        rr->monitor_x = mon_x;
-        rr->monitor_y = mon_y;
+        rr->monitor_x = 0;
+        rr->monitor_y = 0;
         rr->width = mon_w;
         rr->height = mon_h;
         break;
@@ -59,8 +58,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
            monitor. */
         rr->src_x = 0;
         rr->src_y = 0;
-        rr->monitor_x = mon_x + (mon_w - img_w) / 2;
-        rr->monitor_y = mon_y + (mon_h - img_h) / 2;
+        rr->monitor_x = (mon_w - img_w) / 2;
+        rr->monitor_y = (mon_h - img_h) / 2;
         rr->width = img_w;
         rr->height = img_h;
         break;
@@ -79,16 +78,16 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         // Calculate margins to center the scaled image.
         margin_x = (mon_w - rr->width) / 2;
         margin_y = (mon_h - rr->height) / 2;
-        rr->monitor_x = mon_x + (border_x ? margin_x : 0);
-        rr->monitor_y = mon_y + (!border_x ? margin_y : 0);
+        rr->monitor_x = (border_x ? margin_x : 0);
+        rr->monitor_y = (!border_x ? margin_y : 0);
         break;
     default:
         /* Default mode (Cropping):
            Scale the image so that one dimension exactly fits the monitor.
            The other dimension will exceed the monitor size, so it is cropped.
          */
-        rr->monitor_x = mon_x;
-        rr->monitor_y = mon_y;
+        rr->monitor_x = 0;
+        rr->monitor_y = 0;
         // Determine if we need to cut (crop) along the horizontal axis.
         cut_x = img_w * mon_h > img_h * mon_w;
         // Compute the scaled dimensions for both axes.
@@ -101,6 +100,5 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         rr->src_x = cut_x ? ((scaled_w - mon_w) / 2) : 0;
         rr->src_y = !cut_x ? ((scaled_h - mon_h) / 2) : 0;
     }
-
     return rr;
 }

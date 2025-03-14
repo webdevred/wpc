@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
 #include "gui.h"
 
 #include "wallpaper.h"

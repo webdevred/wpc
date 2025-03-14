@@ -1,7 +1,19 @@
 #pragma once
 
-#include "structs.h"
+#include <gtk/gtk.h>
 
-extern void free_wallpapers(ArrayWrapper *arr);
+typedef struct {
+    size_t width, height;
+    gchar *path;
+    GtkFlowBoxChild *flow_child;
+} Wallpaper;
 
-extern ArrayWrapper *list_wallpapers(char *source_directory);
+typedef struct {
+    Wallpaper *data;
+    gushort amount_allocated;
+    gushort amount_used;
+} WallpaperArray;
+
+extern void free_wallpapers(WallpaperArray *arr);
+
+extern WallpaperArray *list_wallpapers(char *source_directory);

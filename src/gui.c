@@ -141,6 +141,7 @@ static void show_images_src_dir(GtkApplication *app) {
     gtk_flow_box_remove_all(GTK_FLOW_BOX(flowbox));
 
     ArrayWrapper *wp_arr_wrapper = list_wallpapers(source_directory);
+    if (!wp_arr_wrapper) return;
     Wallpaper *wallpapers = (Wallpaper *)wp_arr_wrapper->data;
 
     ArrayWrapper *mon_wrap = g_object_get_data(G_OBJECT(app), "monitors");

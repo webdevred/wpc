@@ -60,8 +60,16 @@ extern void free_wallpapers(ArrayWrapper *arr) {
 }
 
 extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
+    DIR *dir = opendir(source_directory);
+    if (!dir) {
+        closedir(dir);
+        g_warning("dir %s does not exist", source_directory);
+        return NULL;
+    }
+
     ArrayWrapper *array_wrapper = malloc(sizeof(ArrayWrapper));
     if (!array_wrapper) {
+        closedir(dir);
         return NULL;
     }
 
@@ -74,13 +82,6 @@ extern ArrayWrapper *list_wallpapers(gchar *source_directory) {
     Wallpaper *wallpaper_array = (Wallpaper *)array_wrapper->data;
     gushort amount_used = 0;
     gushort amount_allocated = 8;
-
-    DIR *dir = opendir(source_directory);
-    if (!dir) {
-        free(array_wrapper->data);
-        free(array_wrapper);
-        return NULL;
-    }
 
     gushort src_dir_len = strlen(source_directory);
     bool slash_needed = source_directory[src_dir_len - 1] != '/';

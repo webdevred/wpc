@@ -88,7 +88,7 @@ static void set_bg_for_monitor_tiled(MagickWand *wand, GC *gc, Monitor *monitor,
     guint output_width = amount_x * img_w;
     guint output_height = amount_y * img_h;
 
-    MagickWand ***images = NULL;
+    MagickWand ***images = g_malloc(sizeof(MagickWand *) * amount_x);
     PixelWand *color = NewPixelWand();
     PixelSetColor(color, "none");
 
@@ -96,11 +96,9 @@ static void set_bg_for_monitor_tiled(MagickWand *wand, GC *gc, Monitor *monitor,
     MagickNewImage(tiled_wand, output_width, output_height, color);
 
     for (i = 0; i < amount_x; i++) {
-        images = realloc(images, (i + 1) * sizeof(MagickWand *));
-        images[i] = NULL;
+        images[i] = g_malloc(sizeof(MagickWand *) * amount_y);
 
         for (j = 0; j < amount_y; j++) {
-            images[i] = realloc(images[i], (j + 1) * sizeof(MagickWand *));
             images[i][j] = CloneMagickWand(wand);
 
             MagickCompositeImage(tiled_wand, images[i][j], OverCompositeOp,
@@ -135,8 +133,8 @@ static void set_bg_for_monitor_tiled(MagickWand *wand, GC *gc, Monitor *monitor,
     XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
                                   output_width, output_height, 32, 0);
 
-    XPutImage(disp, pmap, *gc, ximage, 0, 0, monitor->left_x, monitor->top_y, monitor->width,
-              monitor->height);
+    XPutImage(disp, pmap, *gc, ximage, 0, 0, monitor->left_x, monitor->top_y,
+              monitor->width, monitor->height);
 
     ximage->data = NULL;
     XDestroyImage(ximage);
@@ -206,8 +204,8 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
             g_warning("image %s too big for monitor %s with BG_MODE_TILE, "
                       "using BG_MODE_FILL instead",
                       wallpaper_path, monitor->name);
-            set_bg_for_monitor_non_tiled(wand, conf_bg_fb_color, BG_MODE_FILL, gc,
-                                         monitor, pmap);
+            set_bg_for_monitor_non_tiled(wand, conf_bg_fb_color, BG_MODE_FILL,
+                                         gc, monitor, pmap);
         }
     } else {
         set_bg_for_monitor_non_tiled(wand, conf_bg_fb_color, bg_mode, gc,

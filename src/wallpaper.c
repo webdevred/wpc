@@ -88,7 +88,6 @@ static void set_bg_for_monitor_tiled(MagickWand *wand, GC *gc, Monitor *monitor,
     guint output_width = amount_x * img_w;
     guint output_height = amount_y * img_h;
 
-    MagickWand ***images = g_malloc(sizeof(MagickWand *) * amount_x);
     PixelWand *color = NewPixelWand();
     PixelSetColor(color, "none");
 
@@ -96,27 +95,12 @@ static void set_bg_for_monitor_tiled(MagickWand *wand, GC *gc, Monitor *monitor,
     MagickNewImage(tiled_wand, output_width, output_height, color);
 
     for (i = 0; i < amount_x; i++) {
-        images[i] = g_malloc(sizeof(MagickWand *) * amount_y);
-
         for (j = 0; j < amount_y; j++) {
-            images[i][j] = CloneMagickWand(wand);
-
-            MagickCompositeImage(tiled_wand, images[i][j], OverCompositeOp,
+            MagickCompositeImage(tiled_wand, wand, OverCompositeOp,
                                  img_w * i, img_h * j);
         }
     }
 
-    if (images != NULL) {
-        for (i = 0; i < amount_x; i++) {
-            if (images[i] != NULL) {
-                for (j = 0; j < amount_y; j++) {
-                    DestroyMagickWand(images[i][j]);
-                }
-                free(images[i]);
-            }
-        }
-        free(images);
-    }
     DestroyPixelWand(color);
 
     XGCValues gcval;
@@ -130,6 +114,7 @@ static void set_bg_for_monitor_tiled(MagickWand *wand, GC *gc, Monitor *monitor,
     MagickExportImagePixels(tiled_wand, 0, 0, output_width, output_height,
                             pixel_format, CharPixel, pixels);
 
+    DestroyMagickWand(tiled_wand);
     XImage *ximage = XCreateImage(disp, vis, depth, ZPixmap, 0, (char *)pixels,
                                   output_width, output_height, 32, 0);
 

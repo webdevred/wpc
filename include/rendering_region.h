@@ -1,9 +1,9 @@
 #pragma once
 
+#include "config.h"
+#include "monitors.h"
 #include <glib.h>
 #include <wand/MagickWand.h>
-#include "monitors.h"
-#include "config.h"
 
 typedef struct {
     gushort width, height;

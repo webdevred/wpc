@@ -23,7 +23,7 @@ const char *pixel_format = "RGBA";
 const char *pixel_format = "BGRA";
 #endif
 
-void init_x(void) {
+extern void init_x(void) {
     init_disp(&disp, &root);
     vis = DefaultVisual(disp, DefaultScreen(disp));
     depth = DefaultDepth(disp, DefaultScreen(disp));
@@ -80,7 +80,7 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
     return;
 }
 
-static void wm_set_bg(Config *config) {
+extern void set_wallpapers(Config *config, MonitorArray *mon_arr_wrapper) {
     GC gc;
     XGCValues gcvalues;
 
@@ -95,7 +95,6 @@ static void wm_set_bg(Config *config) {
     gushort depth2;
 
     pmap_d1 = XCreatePixmap(disp, root, scr->width, scr->height, depth);
-    MonitorArray *mon_arr_wrapper = list_monitors(true);
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
     gushort m;
     ConfigMonitor *monitor_bgs = config->monitors_with_backgrounds;
@@ -130,7 +129,6 @@ static void wm_set_bg(Config *config) {
         set_bg_for_monitor(wallpaper_path, bg_fallback_color, bg_mode, &gc,
                            monitor, pmap_d1);
     }
-    free_monitors(mon_arr_wrapper);
 
     /* create new display, copy pixmap to new display */
     disp2 = XOpenDisplay(NULL);
@@ -191,9 +189,4 @@ static void wm_set_bg(Config *config) {
     XCloseDisplay(disp2);
 
     return;
-}
-
-extern void set_wallpapers(Config *config) {
-    init_x();
-    wm_set_bg(config);
 }

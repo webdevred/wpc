@@ -26,7 +26,9 @@ typedef struct {
     bool valid_source_directory;
 } Config;
 
-extern void init_config_monitor(Config *config, const gchar *monitor_name, const gchar *wallpaper_path, const BgMode bg_mode);
+extern void init_config_monitor(Config *config, const gchar *monitor_name,
+                                const gchar *wallpaper_path,
+                                const BgMode bg_mode);
 
 extern void free_config(Config *config);
 

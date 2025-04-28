@@ -1,41 +1,68 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "gui.h"
+#include <signal.h>
+#include <stdlib.h>
+#include <sys/types.h>
 
+#include "monitors.h"
+#include "options.h"
 #include "wallpaper.h"
-#include <execinfo.h>
 #include <glib.h>
 
-void custom_log_handler(const gchar *log_domain, GLogLevelFlags log_level,
-                        const gchar *message, gpointer user_data) {
-    (void)user_data;
-    (void)log_domain;
-    if (log_level & (G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL)) {
-        g_printerr("GTK Warning: %s\n", message);
-
-        void *array[10];
-        size_t size = backtrace(array, 10);
-        char **symbols = backtrace_symbols(array, size);
-        g_printerr("Stack trace:\n");
-        for (size_t i = 0; i < size; i++) {
-            g_printerr("%s\n", symbols[i]);
-        }
-        g_free(symbols);
-    }
+extern int set_backgrounds_and_exit() {
+    Config *config = load_config();
+    MonitorArray *monitor_array = list_monitors(true);
+    set_wallpapers(config, monitor_array);
+    free_config(config);
+    free_monitors(monitor_array);
+    return 0;
 }
 
-int main(int argc, char **argv) {
-    if (argc == 2 && strcmp(argv[1], "-b") == 0) {
+volatile bool terminate = false;
+
+static void handle_termination(int signal) {
+    (void)signal;
+    terminate = true;
+}
+
+extern int fork_and_exit() {
+    signal(SIGINT, handle_termination);
+    signal(SIGTERM, handle_termination);
+    pid_t pid = fork();
+    if (pid == 0) {
         Config *config = load_config();
-        set_wallpapers(config);
+        init_x();
+        MonitorArray *monitor_array = list_monitors(true);
+
+        while (!terminate) {
+            set_wallpapers(config, monitor_array);
+            sleep(5000);
+        }
+
         free_config(config);
-        exit(0);
+        free_monitors(monitor_array);
+    }
+    return 0;
+}
+
+extern int main(int argc, char **argv) {
+    Options *options = malloc(sizeof(Options));
+    parse_options(argv, options);
+
+    init_x();
+
+    int status;
+
+    switch (options->action) {
+    case SET_BACKGROUNDS_AND_EXIT:
+        status = set_backgrounds_and_exit();
+        break;
+    case DAEMON_SET_BACKGROUNDS:
+        status = fork_and_exit();
+        status = 0;
+        break;
+    case START_GUI:
+        status = initialize_application(argc, argv);
     }
 
-    g_log_set_handler("Gtk", G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL,
-                      custom_log_handler, NULL);
-
-    return initialize_application(argc, argv);
+    return status;
 }

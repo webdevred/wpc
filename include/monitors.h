@@ -1,9 +1,9 @@
 #pragma once
-#include <glib.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
-#include <stdbool.h>
 #include <filesystem.h>
+#include <glib.h>
+#include <stdbool.h>
 
 typedef struct {
     gushort width, height;

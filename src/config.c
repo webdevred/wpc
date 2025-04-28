@@ -108,10 +108,10 @@ extern void free_config(Config *config) {
 }
 
 extern void update_source_directory(Config *config, const gchar *new_src_dir) {
-    if(validate_src_dir(new_src_dir)) {
-      free(config->source_directory);
-      config->source_directory = g_strdup(new_src_dir);
-      config->valid_source_directory = true;
+    if (validate_src_dir(new_src_dir)) {
+        free(config->source_directory);
+        config->source_directory = g_strdup(new_src_dir);
+        config->valid_source_directory = true;
     }
 }
 

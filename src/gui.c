@@ -90,7 +90,8 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
             config->number_of_monitors++;
         }
         dump_config(config);
-        set_wallpapers(config);
+        MonitorArray *monitors = g_object_get_data(G_OBJECT(app), "monitors");
+        set_wallpapers(config, monitors);
 #ifdef WPC_ENABLE_HELPER
     }
 #endif
@@ -203,7 +204,8 @@ static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
         config_monitor->bg_mode = bg_mode;
 
         dump_config(config);
-        set_wallpapers(config);
+        MonitorArray *monitors = g_object_get_data(G_OBJECT(app), "monitors");
+        set_wallpapers(config, monitors);
     }
 }
 

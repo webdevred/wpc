@@ -1,3 +1,4 @@
+#include "glib.h"
 #include "monitors.h"
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -36,7 +37,7 @@ extern void init_x(void) {
 }
 
 static void set_bg_for_monitor(const gchar *wallpaper_path,
-                               gchar *conf_bg_fb_color, BgMode bg_mode, GC *gc,
+                               gchar *conf_bg_fb_color, BgMode bg_mode,
                                Monitor *monitor, Pixmap pmap) {
     MagickWandGenesis();
 
@@ -63,9 +64,9 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
 
     XGCValues gcval;
     gcval.foreground = None;
-    *gc = XCreateGC(disp, root, GCForeground, &gcval);
+    GC gc = XCreateGC(disp, root, GCForeground, &gcval);
 
-    XPutImage(disp, pmap, *gc, ximage, 0, 0, monitor->left_x, monitor->top_y,
+    XPutImage(disp, pmap, gc, ximage, 0, 0, monitor->left_x, monitor->top_y,
               monitor->width, monitor->height);
 
     ximage->data = NULL;
@@ -73,21 +74,25 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
     free(pixels);
     pixels = NULL;
 
-    XFreeGC(disp, *gc);
+    XFreeGC(disp, gc);
 
     DestroyMagickWand(wand);
     MagickWandTerminus();
     return;
 }
 
+static Atom get_atom(Display *display, char *atom_name, Bool only_if_exists) {
+    Atom atom = XInternAtom(display, atom_name, only_if_exists);
+    if (atom == None) {
+        g_error("failed to get atom %s", atom_name);
+    }
+    return atom;
+}
+
 extern void set_wallpapers(Config *config, MonitorArray *mon_arr_wrapper) {
     GC gc;
-    XGCValues gcvalues;
 
-    Atom prop_root, prop_esetroot, type;
-    int format;
-    unsigned long length, after;
-    unsigned char *data_root = NULL, *data_esetroot = NULL;
+    Atom prop_root, prop_esetroot;
     Pixmap pmap_d1, pmap_d2;
 
     Display *disp2;
@@ -126,8 +131,8 @@ extern void set_wallpapers(Config *config, MonitorArray *mon_arr_wrapper) {
                wallpaper_path, monitor->width, monitor->height, monitor->left_x,
                monitor->top_y);
 
-        set_bg_for_monitor(wallpaper_path, bg_fallback_color, bg_mode, &gc,
-                           monitor, pmap_d1);
+        set_bg_for_monitor(wallpaper_path, bg_fallback_color, bg_mode, monitor,
+                           pmap_d1);
     }
 
     /* create new display, copy pixmap to new display */
@@ -137,45 +142,20 @@ extern void set_wallpapers(Config *config, MonitorArray *mon_arr_wrapper) {
     depth2 = DefaultDepth(disp2, DefaultScreen(disp2));
     XSync(disp, False);
     pmap_d2 = XCreatePixmap(disp2, root2, scr->width, scr->height, depth2);
-    gcvalues.fill_style = FillTiled;
-    gcvalues.tile = pmap_d1;
+    XGCValues gcvalues = {
+        .fill_style = FillTiled,
+        .tile = pmap_d1,
+    };
     gc = XCreateGC(disp2, pmap_d2, GCFillStyle | GCTile, &gcvalues);
     XFillRectangle(disp2, pmap_d2, gc, 0, 0, scr->width, scr->height);
-    XFreeGC(disp2, gc);
-    XSync(disp2, False);
-    XSync(disp, False);
-    XFreePixmap(disp, pmap_d1);
 
-    prop_root = XInternAtom(disp2, "_XROOTPMAP_ID", True);
-    prop_esetroot = XInternAtom(disp2, "ESETROOT_PMAP_ID", True);
+    prop_root = get_atom(disp2, "_XROOTPMAP_ID", False);
+    prop_esetroot = get_atom(disp2, "ESETROOT_PMAP_ID", False);
 
-    if (prop_root != None && prop_esetroot != None) {
-        XGetWindowProperty(disp2, root2, prop_root, 0L, 1L, False,
-                           AnyPropertyType, &type, &format, &length, &after,
-                           &data_root);
-        if (type == XA_PIXMAP) {
-            XGetWindowProperty(disp2, root2, prop_esetroot, 0L, 1L, False,
-                               AnyPropertyType, &type, &format, &length, &after,
-                               &data_esetroot);
-            if (data_root && data_esetroot) {
-                if (type == XA_PIXMAP &&
-                    *((Pixmap *)data_root) == *((Pixmap *)data_esetroot)) {
-                    XKillClient(disp2, *((Pixmap *)data_root));
-                }
-            }
-        }
+    if (prop_root == None || prop_esetroot == None) {
+        g_critical("creation of pixmap property failed.");
+        goto cleanup;
     }
-
-    if (data_root) XFree(data_root);
-
-    if (data_esetroot) XFree(data_esetroot);
-
-    /* This will locate the property, creating it if it doesn't exist */
-    prop_root = XInternAtom(disp2, "_XROOTPMAP_ID", False);
-    prop_esetroot = XInternAtom(disp2, "ESETROOT_PMAP_ID", False);
-
-    if (prop_root == None || prop_esetroot == None)
-        g_error("creation of pixmap property failed.");
 
     XChangeProperty(disp2, root2, prop_root, XA_PIXMAP, 32, PropModeReplace,
                     (unsigned char *)&pmap_d2, 1);
@@ -186,6 +166,13 @@ extern void set_wallpapers(Config *config, MonitorArray *mon_arr_wrapper) {
     XClearWindow(disp2, root2);
     XFlush(disp2);
     XSetCloseDownMode(disp2, RetainPermanent);
+
+cleanup:
+    XFreeGC(disp2, gc);
+    XSync(disp2, False);
+    XSync(disp, False);
+    XFreePixmap(disp, pmap_d1);
+
     XCloseDisplay(disp2);
 
     return;

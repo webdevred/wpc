@@ -2,8 +2,8 @@
 
 #include "config.h"
 #include "monitors.h"
+#include "wpc_imagemagick.h"
 #include <glib.h>
-#include <wand/MagickWand.h>
 
 typedef struct {
     gushort width, height;

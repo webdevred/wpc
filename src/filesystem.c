@@ -3,9 +3,9 @@
 #include <magic.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <wand/MagickWand.h>
 
 #include "filesystem.h"
+#include "wpc_imagemagick.h"
 
 static bool check_image(const char *filename) {
     magic_t magic = magic_open(MAGIC_MIME_TYPE);

@@ -3,11 +3,10 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <wand/MagickWand.h>
-#include <wand/magick-image.h>
 
 #include "wallpaper.h"
 #include "wallpaper_transformation.h"
+#include "wpc_imagemagick.h"
 
 Display *disp = NULL;
 Visual *vis = NULL;

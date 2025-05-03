@@ -1,5 +1,5 @@
 #include "rendering_region.h"
-#include "wand/MagickWand.h"
+#include "wpc_imagemagick.h"
 
 /*
  * Function: create_rendering_region

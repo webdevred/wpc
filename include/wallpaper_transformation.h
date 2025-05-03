@@ -1,5 +1,7 @@
+#pragma once
+
 #include "rendering_region.h"
-#include <wand/MagickWand.h>
+#include "wpc_imagemagick.h"
 
 extern bool transform_wallpaper_tiled(MagickWand **wand_ptr, Monitor *monitor);
 

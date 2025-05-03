@@ -1,3 +1,4 @@
+#include "wpc_imagemagick.h"
 #include <cjson/cJSON.h>
 #include <ctype.h>
 #include <glib.h>
@@ -5,8 +6,6 @@
 #include <stdio.h>
 #include <sys/prctl.h>
 #include <unistd.h>
-#include <wand/MagickWand.h>
-#include <wand/magick-image.h>
 
 #define DM_CONFIG_PAYLOAD
 #include "common.h"

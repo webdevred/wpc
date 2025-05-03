@@ -2,6 +2,7 @@ SHELL := /bin/bash
 CC := clang
 
 WPC_HELPER ?= 1
+WPC_IMAGEMAGICK_7 ?= 1
 
 WPC_INSTALL_DIR := /usr/local/bin
 WPC_HELPER_INSTALL_DIR := /usr/local/libexec/wpc
@@ -23,6 +24,11 @@ BC_DIR := bc_files
 
 WPC_SRCS := $(wildcard $(SRC_DIR)/*.c)
 WPC_SRCS := $(filter-out $(SRC_DIR)/wpc_lightdm_helper.c $(SRC_DIR)/lightdm.c, $(WPC_SRCS))
+
+ifeq ($(WPC_IMAGEMAGICK_7), 1)
+    WPC_CFLAGS += -DWPC_IMAGEMAGICK_7
+    WPC_LDFLAGS += -DWPC_IMAGEMAGICK_7
+endif
 
 ifeq ($(WPC_HELPER), 1)
     WPC_SRCS += $(SRC_DIR)/lightdm.c

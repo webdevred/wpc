@@ -8,6 +8,11 @@
 #include "wallpaper.h"
 #include <glib.h>
 
+#include "wpc_imagemagick.h"
+__attribute__((used)) static void _mark_magick_used(void) {
+    _wpc_magick_include_marker();
+}
+
 extern int set_backgrounds_and_exit() {
     Config *config = load_config();
     MonitorArray *monitor_array = list_monitors(true);
@@ -25,10 +30,11 @@ static void handle_termination(int signal) {
 }
 
 extern int fork_and_exit() {
-    signal(SIGINT, handle_termination);
-    signal(SIGTERM, handle_termination);
     pid_t pid = fork();
     if (pid == 0) {
+        signal(SIGINT, handle_termination);
+        signal(SIGTERM, handle_termination);
+
         Config *config = load_config();
         init_x();
         MonitorArray *monitor_array = list_monitors(true);
@@ -48,6 +54,8 @@ extern int main(int argc, char **argv) {
     Options *options = malloc(sizeof(Options));
     parse_options(argv, options);
 
+    MagickWandGenesis();
+
     init_x();
 
     int status;
@@ -63,6 +71,8 @@ extern int main(int argc, char **argv) {
     case START_GUI:
         status = initialize_application(argc, argv);
     }
+
+    MagickWandTerminus();
 
     return status;
 }

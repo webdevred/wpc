@@ -1,3 +1,5 @@
+#pragma once
+
 typedef enum {
     DAEMON_SET_BACKGROUNDS,
     SET_BACKGROUNDS_AND_EXIT,

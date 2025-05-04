@@ -1,4 +1,3 @@
-#include "wpc_imagemagick.h"
 #include <cjson/cJSON.h>
 #include <ctype.h>
 #include <glib.h>
@@ -11,6 +10,11 @@
 #include "common.h"
 #include "lightdm.h"
 #include "wallpaper_transformation.h"
+
+#include "wpc_imagemagick.h"
+__attribute__((used)) static void _mark_magick_used(void) {
+    _wpc_magick_include_marker();
+}
 
 static void format_dst_filename(gchar **dst_filename) {
     gchar *str = *dst_filename;
@@ -60,8 +64,6 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path,
 
     MagickWand *wand = NULL;
 
-    MagickWandGenesis();
-
     wand = NewMagickWand();
     MagickReadImage(wand, src_image->path);
 
@@ -74,7 +76,6 @@ static int scale_image(Wallpaper *src_image, char *dst_image_path,
 
     wand = DestroyMagickWand(wand);
 
-    MagickWandTerminus();
     return 0;
 }
 

@@ -6,7 +6,11 @@
 
 #include "wallpaper.h"
 #include "wallpaper_transformation.h"
+
 #include "wpc_imagemagick.h"
+__attribute__((used)) static void _mark_magick_used(void) {
+    _wpc_magick_include_marker();
+}
 
 Display *disp = NULL;
 Visual *vis = NULL;
@@ -17,9 +21,11 @@ Atom wmDeleteWindow;
 XContext xid_context = 0;
 Window root = 0;
 
-#if IMAGEMAGICK_MAJOR_VERSION >= 7
+#ifdef WPC_IMAGEMAGICK_7
+#include <MagickWand/MagickWand.h>
 const char *pixel_format = "RGBA";
 #else
+#include <wand/MagickWand.h>
 const char *pixel_format = "BGRA";
 #endif
 
@@ -38,13 +44,10 @@ extern void init_x(void) {
 static void set_bg_for_monitor(const gchar *wallpaper_path,
                                gchar *conf_bg_fb_color, BgMode bg_mode,
                                Monitor *monitor, Pixmap pmap) {
-    MagickWandGenesis();
-
     MagickWand *wand = NewMagickWand();
 
     if (MagickReadImage(wand, wallpaper_path) == MagickFalse) {
         DestroyMagickWand(wand);
-        MagickWandTerminus();
         g_warning("Failed to read image: %s\n", wallpaper_path);
         return;
     }
@@ -76,7 +79,6 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
     XFreeGC(disp, gc);
 
     DestroyMagickWand(wand);
-    MagickWandTerminus();
     return;
 }
 

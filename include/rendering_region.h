@@ -2,8 +2,9 @@
 
 #include "config.h"
 #include "monitors.h"
-#include "wpc_imagemagick.h"
 #include <glib.h>
+
+typedef struct _MagickWand MagickWand;
 
 typedef struct {
     gushort width, height;

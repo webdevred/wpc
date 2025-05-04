@@ -2,6 +2,11 @@
 #include "rendering_region.h"
 #include <glib.h>
 
+#include "wpc_imagemagick.h"
+__attribute__((used)) static void _mark_magick_used(void) {
+    _wpc_magick_include_marker();
+}
+
 /*
  * Function: transform_wallpaper
  * -----------------------------

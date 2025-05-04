@@ -6,6 +6,9 @@
 
 #include "filesystem.h"
 #include "wpc_imagemagick.h"
+__attribute__((used)) static void _mark_magick_used(void) {
+    _wpc_magick_include_marker();
+}
 
 static bool check_image(const char *filename) {
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
@@ -89,8 +92,6 @@ extern WallpaperArray *list_wallpapers(gchar *source_directory) {
 
     struct dirent *file;
 
-    MagickWandGenesis();
-
     while ((file = readdir(dir)) != NULL) {
         gchar *filename = file->d_name;
 
@@ -134,8 +135,6 @@ extern WallpaperArray *list_wallpapers(gchar *source_directory) {
 
         amount_used++;
     }
-
-    MagickWandTerminus();
 
     closedir(dir);
 

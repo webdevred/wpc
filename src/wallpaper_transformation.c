@@ -32,7 +32,7 @@ extern void transform_wallpaper(MagickWand **wand_ptr, Monitor *monitor,
                                 const gchar *bg_fallback_color) {
     MagickWand *wand = *wand_ptr;
 
-    RenderingRegion *rr = create_rendering_region(wand, monitor, bg_mode);
+    RenderingRegion rr = create_rendering_region(wand, monitor, bg_mode);
 
     PixelWand *color = NewPixelWand();
     PixelSetColor(color, bg_fallback_color);
@@ -40,19 +40,18 @@ extern void transform_wallpaper(MagickWand **wand_ptr, Monitor *monitor,
     MagickWand *scaled_wand = NewMagickWand();
     MagickNewImage(scaled_wand, monitor->width, monitor->height, color);
 #ifdef WPC_IMAGEMAGICK_7
-    MagickResizeImage(wand, rr->width, rr->height, LanczosFilter);
-    MagickCropImage(wand, rr->width, rr->height, rr->src_x, rr->src_y);
+    MagickResizeImage(wand, rr.width, rr.height, LanczosFilter);
+    MagickCropImage(wand, rr.width, rr.height, rr.src_x, rr.src_y);
     MagickCompositeImage(scaled_wand, wand, OverCompositeOp, MagickTrue,
-                         rr->monitor_x, rr->monitor_y);
+                         rr.monitor_x, rr.monitor_y);
 #else
-    MagickResizeImage(wand, rr->width, rr->height, LanczosFilter, 1.0);
-    MagickCropImage(wand, rr->width, rr->height, rr->src_x, rr->src_y);
+    MagickResizeImage(wand, rr.width, rr.height, LanczosFilter, 1.0);
+    MagickCropImage(wand, rr.width, rr.height, rr.src_x, rr.src_y);
 
-    MagickCompositeImage(scaled_wand, wand, OverCompositeOp, rr->monitor_x,
-                         rr->monitor_y);
+    MagickCompositeImage(scaled_wand, wand, OverCompositeOp, rr.monitor_x,
+                         rr.monitor_y);
 #endif
 
-    free(rr);
     DestroyPixelWand(color);
     wand = NULL;
     DestroyMagickWand(*wand_ptr);

@@ -15,12 +15,11 @@
  * BG_MODES.org for explanation for information.
  *
  * Returns:
- *   A pointer to the allocated RenderingRegion with computed source offsets and
- * dimensions.
+ *   A RenderingRegion with computed source offsets and dimensions.
  */
-extern RenderingRegion *
+extern RenderingRegion
 create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
-    RenderingRegion *rr = malloc(sizeof(RenderingRegion));
+    RenderingRegion rr;
 
     size_t img_w, img_h;
 
@@ -46,59 +45,59 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
     switch (bg_mode) {
     case BG_MODE_SCALE:
         // BG_MODE_SCALE: Stretch the image to completely fill the monitor.
-        rr->src_x = 0;
-        rr->src_y = 0;
-        rr->monitor_x = 0;
-        rr->monitor_y = 0;
-        rr->width = mon_w;
-        rr->height = mon_h;
+        rr.src_x = 0;
+        rr.src_y = 0;
+        rr.monitor_x = 0;
+        rr.monitor_y = 0;
+        rr.width = mon_w;
+        rr.height = mon_h;
         break;
     case BG_MODE_CENTER:
         /* BG_MODE_CENTER: Place the image at its original size, centered on the
            monitor. */
-        rr->src_x = 0;
-        rr->src_y = 0;
-        rr->monitor_x = (mon_w - img_w) / 2;
-        rr->monitor_y = (mon_h - img_h) / 2;
-        rr->width = img_w;
-        rr->height = img_h;
+        rr.src_x = 0;
+        rr.src_y = 0;
+        rr.monitor_x = (mon_w - img_w) / 2;
+        rr.monitor_y = (mon_h - img_h) / 2;
+        rr.width = img_w;
+        rr.height = img_h;
         break;
     case BG_MODE_MAX:
         /* BG_MODE_MAX: Scale the image proportionally so that it fills the
            monitor. Determine if the image is limited by width (border_x true)
            or height. */
-        rr->src_x = 0;
-        rr->src_y = 0;
+        rr.src_x = 0;
+        rr.src_y = 0;
         border_x = img_w * mon_h < img_h * mon_w;
         // If border_x is true, scale based on height; otherwise, use full
         // monitor width.
-        rr->width = border_x ? ((mon_h * img_w) / img_h) : mon_w;
+        rr.width = border_x ? ((mon_h * img_w) / img_h) : mon_w;
         // Similarly, determine the height.
-        rr->height = !border_x ? ((mon_w * img_h) / img_w) : mon_h;
+        rr.height = !border_x ? ((mon_w * img_h) / img_w) : mon_h;
         // Calculate margins to center the scaled image.
-        margin_x = (mon_w - rr->width) / 2;
-        margin_y = (mon_h - rr->height) / 2;
-        rr->monitor_x = (border_x ? margin_x : 0);
-        rr->monitor_y = (!border_x ? margin_y : 0);
+        margin_x = (mon_w - rr.width) / 2;
+        margin_y = (mon_h - rr.height) / 2;
+        rr.monitor_x = (border_x ? margin_x : 0);
+        rr.monitor_y = (!border_x ? margin_y : 0);
         break;
     default:
         /* Default mode (Cropping):
            Scale the image so that one dimension exactly fits the monitor.
            The other dimension will exceed the monitor size, so it is cropped.
          */
-        rr->monitor_x = 0;
-        rr->monitor_y = 0;
+        rr.monitor_x = 0;
+        rr.monitor_y = 0;
         // Determine if we need to cut (crop) along the horizontal axis.
         cut_x = img_w * mon_h > img_h * mon_w;
         // Compute the scaled dimensions for both axes.
         scaled_w = (mon_h * img_w) / img_h;
         scaled_h = (mon_w * img_h) / img_w;
         // Set the final width and height of the rendering region.
-        rr->width = cut_x ? scaled_w : mon_w;
-        rr->height = cut_x ? mon_h : scaled_h;
+        rr.width = cut_x ? scaled_w : mon_w;
+        rr.height = cut_x ? mon_h : scaled_h;
         // Calculate the source offsets to center the crop.
-        rr->src_x = cut_x ? ((scaled_w - mon_w) / 2) : 0;
-        rr->src_y = !cut_x ? ((scaled_h - mon_h) / 2) : 0;
+        rr.src_x = cut_x ? ((scaled_w - mon_w) / 2) : 0;
+        rr.src_y = !cut_x ? ((scaled_h - mon_h) / 2) : 0;
     }
     return rr;
 }

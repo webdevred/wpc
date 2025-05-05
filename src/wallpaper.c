@@ -22,10 +22,8 @@ XContext xid_context = 0;
 Window root = 0;
 
 #ifdef WPC_IMAGEMAGICK_7
-#include <MagickWand/MagickWand.h>
 const char *pixel_format = "RGBA";
 #else
-#include <wand/MagickWand.h>
 const char *pixel_format = "BGRA";
 #endif
 

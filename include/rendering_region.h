@@ -12,5 +12,5 @@ typedef struct {
     gshort monitor_x, monitor_y;
 } RenderingRegion;
 
-extern RenderingRegion *
+extern RenderingRegion
 create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode);

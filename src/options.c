@@ -11,8 +11,10 @@ void parse_options(char **argv, Options *options) {
         switch (**argv) {
         case 'b':
             options->action = SET_BACKGROUNDS_AND_EXIT;
+            break;
         case 'd':
             options->action = DAEMON_SET_BACKGROUNDS;
+            break;
         }
         (*argv)++;
     }

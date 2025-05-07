@@ -4,24 +4,54 @@
 
 #include "monitors.h"
 
-static void get_screen_resources(Display **disp, Window *root,
-                                 XRRScreenResources **screen_resources) {
-    *screen_resources = XRRGetScreenResources(*disp, *root);
-    if (*screen_resources == NULL) {
+Display *querying_display = NULL;
+Window querying_root = 0;
+int querying_depth;
+
+Display *rendering_display = NULL;
+Window rendering_root = 0;
+Visual *rendering_visual = NULL;
+int rendering_depth;
+Colormap rendering_colormap;
+Screen *rendering_screen;
+
+static XRRScreenResources *get_screen_resources() {
+    XRRScreenResources *screen_resources =
+        XRRGetScreenResources(querying_display, querying_root);
+    if (screen_resources == NULL) {
         g_error("Unable to get screen resources\n");
-        XCloseDisplay(*disp);
+        XCloseDisplay(querying_display);
         exit(1);
     }
+    return screen_resources;
 }
 
-extern void init_disp(Display **disp, Window *root) {
-    *disp = XOpenDisplay(NULL);
-    if (*disp == NULL) {
+static Display *open_display() {
+    Display *display = XOpenDisplay(NULL);
+    if (display == NULL) {
         g_error("Unable to open X display\n");
         exit(1);
     }
+    return display;
+}
 
-    *root = DefaultRootWindow(*disp);
+extern void init_x11(void) {
+    querying_display = open_display();
+    querying_root = DefaultRootWindow(querying_display);
+    querying_depth =
+        DefaultDepth(querying_display, DefaultScreen(querying_display));
+
+    rendering_display = open_display();
+    rendering_root = DefaultRootWindow(rendering_display);
+
+    rendering_visual =
+        DefaultVisual(rendering_display, DefaultScreen(rendering_display));
+    rendering_depth =
+        DefaultDepth(rendering_display, DefaultScreen(rendering_display));
+    rendering_colormap =
+        DefaultColormap(rendering_display, DefaultScreen(rendering_display));
+    rendering_screen =
+        ScreenOfDisplay(rendering_display, DefaultScreen(rendering_display));
 }
 
 extern void free_monitors(MonitorArray *arr) {
@@ -31,6 +61,9 @@ extern void free_monitors(MonitorArray *arr) {
     }
     free(monitors);
     free(arr);
+
+    XCloseDisplay(querying_display);
+    XCloseDisplay(rendering_display);
 }
 
 extern MonitorArray *list_monitors(const bool virtual_monitors) {
@@ -39,14 +72,11 @@ extern MonitorArray *list_monitors(const bool virtual_monitors) {
         return NULL;
     }
 
-    Display *display;
-    Window root;
-    init_disp(&display, &root);
-
     if (virtual_monitors) {
         int amount_used = 0;
         XRRMonitorInfo *x_monitors;
-        x_monitors = XRRGetMonitors(display, root, 0, &amount_used);
+        x_monitors =
+            XRRGetMonitors(querying_display, querying_root, 0, &amount_used);
 
         array_wrapper->data = malloc(amount_used * sizeof(Monitor));
         if (!array_wrapper->data) {
@@ -57,7 +87,8 @@ extern MonitorArray *list_monitors(const bool virtual_monitors) {
         Monitor *monitors = (Monitor *)array_wrapper->data;
 
         for (int i = 0; i < amount_used; i++) {
-            monitors[i].name = XGetAtomName(display, x_monitors[i].name);
+            monitors[i].name =
+                XGetAtomName(querying_display, x_monitors[i].name);
             monitors[i].width = x_monitors[i].width;
             monitors[i].height = x_monitors[i].height;
             monitors[i].left_x = x_monitors[i].x;
@@ -78,24 +109,22 @@ extern MonitorArray *list_monitors(const bool virtual_monitors) {
         Monitor *monitors = (Monitor *)array_wrapper->data;
         gushort amount_used = 0;
         gushort amount_allocated = 0;
-        XRRScreenResources *screen_resources;
-
-        get_screen_resources(&display, &root, &screen_resources);
+        XRRScreenResources *screen_resources = get_screen_resources();
 
         XRROutputInfo *outputInfo;
         XRRCrtcInfo *crtcInfo;
 
         RROutput primaryOutput;
 
-        primaryOutput = XRRGetOutputPrimary(display, root);
+        primaryOutput = XRRGetOutputPrimary(querying_display, querying_root);
 
         for (int i = 0; i < screen_resources->noutput; i++) {
-            outputInfo = XRRGetOutputInfo(display, screen_resources,
+            outputInfo = XRRGetOutputInfo(querying_display, screen_resources,
                                           screen_resources->outputs[i]);
 
             if (outputInfo->connection == RR_Connected) {
-                crtcInfo =
-                    XRRGetCrtcInfo(display, screen_resources, outputInfo->crtc);
+                crtcInfo = XRRGetCrtcInfo(querying_display, screen_resources,
+                                          outputInfo->crtc);
                 if (crtcInfo->mode != None) {
                     amount_used++;
                     if (amount_used >= amount_allocated) {
@@ -128,8 +157,6 @@ extern MonitorArray *list_monitors(const bool virtual_monitors) {
         array_wrapper->amount_allocated = amount_allocated;
         array_wrapper->amount_used = amount_used;
     }
-
-    XCloseDisplay(display);
 
     return array_wrapper;
 }

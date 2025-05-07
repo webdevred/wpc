@@ -21,7 +21,18 @@ typedef struct {
     gushort amount_used;
 } MonitorArray;
 
-extern void init_disp(Display **disp, Window *root);
+extern Display *querying_display;
+extern Window querying_root;
+extern int querying_depth;
+
+extern Display *rendering_display;
+extern Window rendering_root;
+extern Visual *rendering_visual;
+extern int rendering_depth;
+extern Colormap rendering_colormap;
+extern Screen *rendering_screen;
+
+extern void init_x11(void);
 
 extern void free_monitors(MonitorArray *arr);
 

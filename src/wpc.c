@@ -36,8 +36,9 @@ extern int fork_and_exit() {
         signal(SIGTERM, handle_termination);
 
         Config *config = load_config();
-        init_x();
+        init_x11();
         MonitorArray *monitor_array = list_monitors(true);
+        MagickWandGenesis();
 
         while (!terminate) {
             set_wallpapers(config, monitor_array);
@@ -46,6 +47,7 @@ extern int fork_and_exit() {
 
         free_config(config);
         free_monitors(monitor_array);
+        MagickWandTerminus();
     }
     return 0;
 }
@@ -54,11 +56,12 @@ extern int main(int argc, char **argv) {
     Options *options = malloc(sizeof(Options));
     parse_options(argv, options);
 
-    MagickWandGenesis();
-
-    init_x();
-
     int status;
+
+    if (options->action != DAEMON_SET_BACKGROUNDS) {
+        init_x11();
+        MagickWandGenesis();
+    }
 
     switch (options->action) {
     case SET_BACKGROUNDS_AND_EXIT:
@@ -66,13 +69,16 @@ extern int main(int argc, char **argv) {
         break;
     case DAEMON_SET_BACKGROUNDS:
         status = fork_and_exit();
-        status = 0;
         break;
     case START_GUI:
         status = initialize_application(argc, argv);
     }
 
-    MagickWandTerminus();
+    if (options->action != DAEMON_SET_BACKGROUNDS) {
+        MagickWandTerminus();
+    }
+
+    free(options);
 
     return status;
 }

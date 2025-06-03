@@ -49,17 +49,18 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
     g_info("Clicked image %s Selected monitor: %dx%d", wallpaper->path,
            monitor->width, monitor->height);
 
+    GtkWidget *bg_mode_dropdown =
+        g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
+
+    guint selected_index =
+        gtk_drop_down_get_selected(GTK_DROP_DOWN(bg_mode_dropdown));
+
 #ifdef WPC_ENABLE_HELPER
     GtkButton *button_menu_choice =
         g_object_get_data(G_OBJECT(app), "menu_choice");
 
     AppTab *menu_choice =
         g_object_get_data(G_OBJECT(button_menu_choice), "name");
-
-    GtkWidget *bg_mode_dropdown =
-        g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
-    guint selected_index =
-        gtk_drop_down_get_selected(GTK_DROP_DOWN(bg_mode_dropdown));
 
     if (*menu_choice == DM_BACKGROUND) {
         lightdm_set_background(wallpaper, monitor, selected_index);
@@ -193,11 +194,13 @@ static void on_option_selected(GtkDropDown *dropdown, GParamSpec *spec,
     if (monitor == NULL || bg_mode == BG_MODE_NOT_SET) return;
 
     if (*menu_choice == DM_BACKGROUND) {
+#ifdef WPC_ENABLE_HELPER
         GtkWidget *flowbox = g_object_get_data(G_OBJECT(app), "flowbox");
         GList *flowbox_children =
             gtk_flow_box_get_selected_children(GTK_FLOW_BOX(flowbox));
         Wallpaper *wallpaper = get_flow_child_wallpaper(flowbox_children->data);
         lightdm_set_background(wallpaper, monitor, bg_mode);
+#endif
     } else if (monitor->belongs_to_config) {
         ConfigMonitor *config_monitor =
             &config->monitors_with_backgrounds[monitor->config_id];

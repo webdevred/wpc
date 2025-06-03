@@ -8,8 +8,6 @@
 #define SRC_FOLDER "src"
 #define HEADER_FOLDER "include"
 
-typedef enum { WPC = 0, WPC_COMMON = 2 } LibListType;
-
 typedef struct {
     uint count;
     uint capacity;
@@ -17,14 +15,19 @@ typedef struct {
 } LibFlagsDa;
 
 bool use_imagemagick7 = false;
+bool enable_lightdm_helper = true;
+char lightdm_helper_path[256];
 
 void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
                   LibFlagsDa *common_flags) {
     char *lib = nob_temp_sprintf("-I%s", HEADER_FOLDER);
+    nob_cmd_append(cmd, "-std=gnu2x");
     if (use_imagemagick7) nob_cmd_append(cmd, "-DWPC_IMAGEMAGICK_7=1");
-    nob_cmd_append(
-        cmd, "-std=gnu2x", "-DWPC_ENABLE_HELPER=1",
-        "-DWPC_HELPER_PATH=\"/usr/local/libexec/wpc/lightdm_helper\"");
+    if (enable_lightdm_helper) {
+        nob_cmd_append(
+            cmd, "-DWPC_ENABLE_HELPER=1",
+            nob_temp_sprintf("-DWPC_HELPER_PATH=\"%s\"", lightdm_helper_path));
+    }
     nob_cc_flags(cmd);
     nob_cmd_append(cmd, lib);
     uint nmain_flags = main_flags->count;
@@ -109,7 +112,8 @@ Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,
                 nob_temp_sprintf("%s/%s", BUILD_FOLDER, object);
             if (strcmp(target, "wpc") == 0) {
                 if (strcmp(object, "wpc_lightdm_helper.o") != 0) {
-                    nob_da_append(&objects, object_place);
+                  if(strcmp(object, "lightdm.o") == 0 && ! enable_lightdm_helper) continue;
+                  nob_da_append(&objects, object_place);
                 } else {
                     continue;
                 }
@@ -157,15 +161,14 @@ int build_target(Nob_Cmd *cmd, const char *target, Nob_File_Paths objects,
     cmd->count = 0;
     return 0;
 }
-
 void should_use_imagemagick7(Nob_Cmd *cmd) {
-    char* imagemagick_version_env = getenv("WPC_IMAGEMAGICK_7");
+    char *imagemagick_version_env = getenv("WPC_IMAGEMAGICK_7");
     if (imagemagick_version_env != NULL) {
         use_imagemagick7 = strcmp(imagemagick_version_env, "0") != 0;
         goto log;
     }
 
-    nob_log(NOB_INFO,"Checking ImageMagick version");
+    nob_log(NOB_INFO, "No environment override found. Detecting ImageMagick version using pkg-config...");
     nob_cmd_append(cmd, "pkg-config", "--modversion", "MagickWand");
 
     int pipefd[2];
@@ -187,15 +190,41 @@ void should_use_imagemagick7(Nob_Cmd *cmd) {
     } else if (strncmp(buffer, "6.", 2) == 0) {
         use_imagemagick7 = false;
     } else {
-      nob_log(NOB_ERROR, "Couldnt find good ImageMagick. We support ImageMagick 6 and 7");
-      exit(1);
+        nob_log(
+            NOB_ERROR,
+            "Couldnt find good ImageMagick. Only versions 6 and 7 are supported.");
+        exit(1);
     }
     cmd->count = 0;
- log:
+log:
     char imagemagick_version = use_imagemagick7 ? '7' : '6';
-    nob_log(NOB_INFO, "Decided use to ImageMagick %c", imagemagick_version);
+    nob_log(NOB_INFO, "Chosen ImageMagick version: %c based on environment or system detection", imagemagick_version);
     return;
 }
+
+void setup_lightdm_helper_flags() {
+    char *enable_helper_var = getenv("WPC_HELPER");
+    char *helper_path_var = getenv("WPC_HELPER_PATH");
+
+    if (helper_path_var != NULL) {
+      strcpy(lightdm_helper_path, helper_path_var);
+    } else {
+      strcpy(lightdm_helper_path, "/usr/local/libexec/wpc/lightdm_helper");
+    }
+
+    if (enable_helper_var != NULL) {
+        enable_lightdm_helper = strcmp(enable_helper_var, "0") != 0;
+    }
+
+    if (enable_lightdm_helper) {
+        nob_log(NOB_INFO,
+                "LightDM helper enabled. Executable path: %s",
+                lightdm_helper_path);
+    } else {
+        nob_log(NOB_INFO, "LightDM helper disabled by configuration");
+    }
+}
+
 
 int main(int argc, char **argv) {
     NOB_GO_REBUILD_URSELF(argc, argv);
@@ -204,6 +233,7 @@ int main(int argc, char **argv) {
 
     Nob_Cmd cmd = {0};
     should_use_imagemagick7(&cmd);
+    setup_lightdm_helper_flags();
 
     char *wpc_libs[] = {"gtk4",       "glib-2.0", "x11", "xrandr",
                         "MagickWand", "libmagic", NULL};

@@ -33,13 +33,21 @@ The program supports various image formats and makes it easy to change the wallp
 * Installation
 
 To install WPC, follow these steps:
+#+begin_src bash
+     git clone https://github.com/webdevred/wpc
+     cd wpc
+     gcc nob.c -o nob
+     ./nob
+#+end_src
 
+Alternatively, you can use the legacy Makefile:  
 #+begin_src bash
   git clone https://github.com/webdevred/wpc
   cd wpc
   make
-  sudo make install
 #+end_src
+
+Both build systems should work, but nob is the preferred method.
 
 * Usage
 

@@ -42,6 +42,45 @@ void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
     }
 }
 
+char *run_cmd_and_get_output(Nob_Cmd *cmd) {
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        return NULL;
+    }
+
+    Nob_Cmd_Redirect cmd_red = {0};
+    cmd_red.fdout = &pipefd[1];
+    nob_cmd_run_async_redirect(*cmd, cmd_red);
+    cmd->count = 0;
+
+    close(pipefd[1]);
+
+    char *buffer = NULL;
+    size_t total_size = 0;
+    char tmp_buffer[256];
+
+    ssize_t bytes_read;
+    while ((bytes_read = read(pipefd[0], tmp_buffer, sizeof(tmp_buffer))) > 0) {
+        char *new_buffer = realloc(buffer, total_size + bytes_read + 1);
+        if (!new_buffer) {
+            free(buffer);
+            close(pipefd[0]);
+            return NULL;
+        }
+        buffer = new_buffer;
+        memcpy(buffer + total_size, tmp_buffer, bytes_read);
+        total_size += bytes_read;
+    }
+
+    if (buffer) {
+        buffer[total_size] = '\0';
+    }
+
+    close(pipefd[0]);
+    return buffer;
+}
+
 LibFlagsDa list_lib_flags(Nob_Cmd *cmd, char *lib_names[], bool cflags) {
     if (cflags) {
         nob_cmd_append(cmd, "pkg-config", "--cflags");
@@ -55,19 +94,8 @@ LibFlagsDa list_lib_flags(Nob_Cmd *cmd, char *lib_names[], bool cflags) {
         lib_name++;
     }
 
-    int pipefd[2];
-    pipe(pipefd);
+    char *buffer = run_cmd_and_get_output(cmd);
 
-    int fdout = pipefd[1];
-
-    Nob_Cmd_Redirect cmd_red = {0};
-    cmd_red.fdout = &fdout;
-    nob_cmd_run_async_redirect(*cmd, cmd_red);
-    cmd->count = 0;
-
-    char buffer[1024];
-    read(pipefd[0], buffer, sizeof(buffer) - 1);
-    close(pipefd[0]);
     LibFlagsDa lib_places = {0};
     char *lib = strtok(buffer, " ");
     nob_da_append(&lib_places, strdup(lib));
@@ -78,6 +106,7 @@ LibFlagsDa list_lib_flags(Nob_Cmd *cmd, char *lib_names[], bool cflags) {
         nob_da_append(&lib_places, strdup(lib));
         lib += strlen(lib) + 1;
     }
+    free(buffer);
     cmd->count = 0;
     return lib_places;
 }
@@ -171,19 +200,7 @@ void should_use_imagemagick7(Nob_Cmd *cmd) {
     nob_log(NOB_INFO, "No environment override found. Detecting ImageMagick version using pkg-config...");
     nob_cmd_append(cmd, "pkg-config", "--modversion", "MagickWand");
 
-    int pipefd[2];
-    pipe(pipefd);
-
-    int fdout = pipefd[1];
-
-    Nob_Cmd_Redirect cmd_red = {0};
-    cmd_red.fdout = &fdout;
-    nob_cmd_run_async_redirect(*cmd, cmd_red);
-    cmd->count = 0;
-
-    char buffer[1024];
-    read(pipefd[0], buffer, sizeof(buffer) - 1);
-    close(pipefd[0]);
+    char* buffer = run_cmd_and_get_output(cmd);
 
     if (strncmp(buffer, "7.", 2) == 0) {
         use_imagemagick7 = true;
@@ -195,6 +212,7 @@ void should_use_imagemagick7(Nob_Cmd *cmd) {
             "Couldnt find good ImageMagick. Only versions 6 and 7 are supported.");
         exit(1);
     }
+    free(buffer);
     cmd->count = 0;
 log:
     char imagemagick_version = use_imagemagick7 ? '7' : '6';

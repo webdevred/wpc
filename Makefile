@@ -8,7 +8,7 @@ WPC_INSTALL_DIR := /usr/local/bin
 WPC_HELPER_INSTALL_DIR := /usr/local/libexec/wpc
 WPC_HELPER_PATH := $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
 
-COMMON_CFLAGS := -Wall -Wextra -std=gnu2x -g3
+COMMON_CFLAGS := -Wall -Wextra -std=gnu23 -g3
 COMMON_LDFLAGS := $(shell pkg-config --libs libcjson)
 
 WPC_CFLAGS := $(COMMON_CFLAGS) $(shell pkg-config --cflags gtk4 glib-2.0 MagickWand libcjson) -DWPC_HELPER_PATH="\"$(WPC_HELPER_PATH)\""

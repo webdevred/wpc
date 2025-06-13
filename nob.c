@@ -22,7 +22,7 @@ char lightdm_helper_path[256];
 void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
                   LibFlagsDa *common_flags) {
     char *lib = nob_temp_sprintf("-I%s", HEADER_FOLDER);
-    nob_cmd_append(cmd, "-std=gnu2x");
+    nob_cmd_append(cmd, "-std=gnu23");
     if (use_imagemagick7) nob_cmd_append(cmd, "-DWPC_IMAGEMAGICK_7=1");
     if (enable_lightdm_helper) {
         nob_cmd_append(

@@ -85,7 +85,7 @@ extern bool transform_wallpaper_tiled(MagickWand **wand_ptr, Monitor *monitor) {
     guint img_w = MagickGetImageWidth(wand);
     guint img_h = MagickGetImageHeight(wand);
 
-    if (img_w > monitor->width || img_h > monitor->height) return false;
+    if (img_w > monitor->width || img_h > monitor->height) return FALSE;
 
     guint amount_x = (monitor->width + img_w - 1) / img_w;
     guint amount_y = (monitor->height + img_h - 1) / img_h;

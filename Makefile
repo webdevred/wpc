@@ -8,11 +8,11 @@ WPC_INSTALL_DIR := /usr/local/bin
 WPC_HELPER_INSTALL_DIR := /usr/local/libexec/wpc
 WPC_HELPER_PATH := $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
 
-COMMON_CFLAGS := -Wall -Wextra -std=gnu23 -g3
-COMMON_LDFLAGS := $(shell pkg-config --libs libcjson)
+COMMON_CFLAGS := -Wall -Wextra -std=gnu11 -g3  $(shell pkg-config --cflags glib-2.0)
+COMMON_LDFLAGS := $(shell pkg-config --libs libcjson glib-2.0)
 
-WPC_CFLAGS := $(COMMON_CFLAGS) $(shell pkg-config --cflags gtk4 glib-2.0 MagickWand libcjson) -DWPC_HELPER_PATH="\"$(WPC_HELPER_PATH)\""
-WPC_LDFLAGS := $(COMMON_LDFLAGS) $(shell pkg-config --libs gtk4 glib-2.0 x11 xrandr MagickWand libmagic)
+WPC_CFLAGS := $(COMMON_CFLAGS) $(shell pkg-config --cflags gtk4 MagickWand libcjson) -DWPC_HELPER_PATH="\"$(WPC_HELPER_PATH)\""
+WPC_LDFLAGS := $(COMMON_LDFLAGS) $(shell pkg-config --libs gtk4 x11 xrandr MagickWand libmagic)
 
 HELPER_CFLAGS := $(COMMON_CFLAGS)
 HELPER_LDFLAGS := $(COMMON_LDFLAGS)
@@ -33,7 +33,7 @@ endif
 ifeq ($(WPC_HELPER), 1)
     WPC_SRCS += $(SRC_DIR)/lightdm.c
     WPC_CFLAGS += -DWPC_ENABLE_HELPER
-    HELPER_SRCS := $(SRC_DIR)/wpc_lightdm_helper.c $(SRC_DIR)/common.c
+    HELPER_SRCS := $(SRC_DIR)/wpc_lightdm_helper.c
 endif
 
 WPC_OBJS := $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(WPC_SRCS))

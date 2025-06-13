@@ -15,18 +15,18 @@ __attribute__((used)) static void _mark_magick_used(void) {
 
 extern int set_backgrounds_and_exit() {
     Config *config = load_config();
-    MonitorArray *monitor_array = list_monitors(true);
+    MonitorArray *monitor_array = list_monitors(TRUE);
     set_wallpapers(config, monitor_array);
     free_config(config);
     free_monitors(monitor_array);
     return 0;
 }
 
-volatile bool terminate = false;
+volatile bool terminate = FALSE;
 
 static void handle_termination(int signal) {
     (void)signal;
-    terminate = true;
+    terminate = TRUE;
 }
 
 extern int fork_and_exit() {
@@ -37,7 +37,7 @@ extern int fork_and_exit() {
 
         Config *config = load_config();
         init_x11();
-        MonitorArray *monitor_array = list_monitors(true);
+        MonitorArray *monitor_array = list_monitors(TRUE);
         MagickWandGenesis();
 
         while (!terminate) {

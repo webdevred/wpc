@@ -22,7 +22,7 @@ char lightdm_helper_path[256];
 void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
                   LibFlagsDa *common_flags) {
     char *lib = nob_temp_sprintf("-I%s", HEADER_FOLDER);
-    nob_cmd_append(cmd, "-std=gnu23");
+    nob_cmd_append(cmd, "-std=gnu11");
     if (use_imagemagick7) nob_cmd_append(cmd, "-DWPC_IMAGEMAGICK_7=1");
     if (enable_lightdm_helper) {
         nob_cmd_append(
@@ -151,8 +151,7 @@ Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,
                     continue;
                 }
             } else if (strcmp(target, "wpc_lightdm_helper") == 0) {
-                if (strcmp(object, "common.o") == 0 ||
-                    strcmp(object, "wpc_lightdm_helper.o") == 0) {
+                if (strcmp(object, "wpc_lightdm_helper.o") == 0) {
                     nob_da_append(&objects, object_place);
                 } else {
                     continue;
@@ -279,9 +278,9 @@ int main(int argc, char **argv) {
     should_use_imagemagick7(&cmd);
     setup_lightdm_helper_flags();
 
-    char *wpc_libs[] = {"gtk4",       "glib-2.0", "x11", "xrandr",
+    char *wpc_libs[] = {"gtk4",       "x11",      "xrandr",
                         "MagickWand", "libmagic", NULL};
-    char *wpc_common_libs[] = {"libcjson", NULL};
+    char *wpc_common_libs[] = {"glib-2.0", "libcjson", NULL};
 
     LibFlagsDa wpc_common_cflags = list_lib_cflags(&cmd, wpc_common_libs);
     LibFlagsDa wpc_common_ldflags = list_lib_ldflags(&cmd, wpc_common_libs);
@@ -297,12 +296,13 @@ int main(int argc, char **argv) {
 
     build_target(&cmd, "wpc", object_names, &wpc_ldflags, &wpc_common_ldflags);
 
-    Nob_File_Paths helper_objects = build_source_files(
-        &cmd, "wpc_lightdm_helper", &wpc_helper_cflags, &wpc_common_cflags);
+    if (enable_lightdm_helper) {
+        Nob_File_Paths helper_objects = build_source_files(
+            &cmd, "wpc_lightdm_helper", &wpc_helper_cflags, &wpc_common_cflags);
 
-    build_target(&cmd, "wpc_lightdm_helper", helper_objects,
-                 &wpc_helper_ldflags, &wpc_common_ldflags);
-
+        build_target(&cmd, "wpc_lightdm_helper", helper_objects,
+                     &wpc_helper_ldflags, &wpc_common_ldflags);
+    }
     nob_da_free(wpc_cflags);
     nob_da_free(wpc_ldflags);
     nob_da_free(wpc_common_cflags);

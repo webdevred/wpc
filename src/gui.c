@@ -85,7 +85,7 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
             init_config_monitor(config, monitor_name, wallpaper_path,
                                 selected_index);
 
-            monitor->belongs_to_config = true;
+            monitor->belongs_to_config = TRUE;
             monitor->config_id = number_of_monitors;
             monitor->wallpaper = wallpaper;
             config->number_of_monitors++;
@@ -145,7 +145,7 @@ static void show_images_src_dir(GtkApplication *app) {
             GtkWidget *image = gtk_image_new_from_file(wallpapers[i].path);
             gtk_flow_box_child_set_child(GTK_FLOW_BOX_CHILD(flow_child), image);
             gtk_flow_box_append(GTK_FLOW_BOX(flowbox), flow_child);
-            gtk_widget_set_visible(image, true);
+            gtk_widget_set_visible(image, TRUE);
             g_object_set_data(G_OBJECT(image), "wallpaper",
                               (gpointer)&wallpapers[i]);
             wallpapers[i].flow_child = GTK_FLOW_BOX_CHILD(flow_child);
@@ -239,7 +239,7 @@ static void show_images(GtkButton *button, GtkApplication *app) {
 
     GtkWidget *bg_mode_dropdown =
         g_object_get_data(G_OBJECT(app), "bg_mode_dropdown");
-    gtk_widget_set_visible(GTK_WIDGET(bg_mode_dropdown), true);
+    gtk_widget_set_visible(GTK_WIDGET(bg_mode_dropdown), TRUE);
 
     BgMode bg_mode = BG_MODE_NOT_SET;
 
@@ -272,13 +272,13 @@ static void show_images(GtkButton *button, GtkApplication *app) {
     g_object_set_data(G_OBJECT(flowbox), "handler", (gpointer)handler);
 
     gtk_widget_add_css_class(GTK_WIDGET(flowbox), "wallpapers_flowbox");
-    gtk_widget_set_vexpand(GTK_WIDGET(flowbox), true);
+    gtk_widget_set_vexpand(GTK_WIDGET(flowbox), TRUE);
     g_object_set_data(G_OBJECT(app), "flowbox", flowbox);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window),
                                   flowbox);
 
-    gtk_widget_set_visible(scrolled_window, true);
-    gtk_widget_set_visible(flowbox, true);
+    gtk_widget_set_visible(scrolled_window, TRUE);
+    gtk_widget_set_visible(flowbox, TRUE);
     show_images_src_dir(app);
 
 update_selection:
@@ -300,7 +300,7 @@ static void show_monitors(GtkApplication *app) {
     GtkBox *monitors_box = g_object_get_data(G_OBJECT(app), "monitors_box");
 
     if (!gtk_widget_is_visible(GTK_WIDGET(monitors_box)))
-        gtk_widget_set_visible(GTK_WIDGET(monitors_box), true);
+        gtk_widget_set_visible(GTK_WIDGET(monitors_box), TRUE);
 }
 
 static void wm_show_monitors(GtkButton *button, gpointer user_data) {
@@ -507,9 +507,9 @@ static void activate(GtkApplication *app, gpointer user_data) {
     GtkWidget *monitors_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
     gtk_box_append(GTK_BOX(vbox), monitors_box);
     g_object_set_data(G_OBJECT(app), "monitors_box", monitors_box);
-    gtk_widget_set_visible(GTK_WIDGET(monitors_box), false);
+    gtk_widget_set_visible(GTK_WIDGET(monitors_box), FALSE);
 
-    MonitorArray *mon_arr_wrapper = list_monitors(true);
+    MonitorArray *mon_arr_wrapper = list_monitors(TRUE);
     Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
 
     gushort monitor_id;
@@ -530,7 +530,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
              config_monitor_id++) {
             if (g_strcmp0(bmp[config_monitor_id].name, monitor->name) == 0) {
                 monitor->config_id = config_monitor_id;
-                monitor->belongs_to_config = true;
+                monitor->belongs_to_config = TRUE;
                 break;
             }
         }
@@ -564,7 +564,7 @@ static void activate(GtkApplication *app, gpointer user_data) {
     }
     g_ptr_array_add(array, NULL);
     string_list = gtk_string_list_new(
-        (const gchar *const *)g_ptr_array_free(array, false));
+        (const gchar *const *)g_ptr_array_free(array, FALSE));
     g_object_set_data(G_OBJECT(app), "bg_mode_options", string_list);
 
     GtkWidget *dropdown = gtk_drop_down_new(G_LIST_MODEL(string_list), NULL);
@@ -576,17 +576,17 @@ static void activate(GtkApplication *app, gpointer user_data) {
                                      (gpointer)app, NULL, G_CONNECT_DEFAULT);
     g_object_set_data(G_OBJECT(dropdown), "handler", (gpointer)handler);
 
-    gtk_widget_set_visible(GTK_WIDGET(dropdown), false);
+    gtk_widget_set_visible(GTK_WIDGET(dropdown), FALSE);
     gtk_box_append(GTK_BOX(menu_box), dropdown);
     g_object_set_data(G_OBJECT(app), "bg_mode_dropdown", dropdown);
 
     GtkWidget *status_selected_monitor = gtk_label_new("");
-    gtk_label_set_selectable(GTK_LABEL(status_selected_monitor), false);
+    gtk_label_set_selectable(GTK_LABEL(status_selected_monitor), FALSE);
     gtk_box_append(GTK_BOX(menu_box), status_selected_monitor);
     g_object_set_data(G_OBJECT(app), "status_selected_monitor",
                       status_selected_monitor);
 
-    gtk_widget_set_visible(window, true);
+    gtk_widget_set_visible(window, TRUE);
 
     gchar css[] = ".wallpapers_flowbox image { min-width: 30em; min-height: "
                   "25em; margin: 0.1em; }";

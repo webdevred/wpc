@@ -7,8 +7,8 @@
 #include <unistd.h>
 
 #define DM_CONFIG_PAYLOAD
-#include "common.h"
 #include "lightdm.h"
+#include "lightdm_helper_payload.h"
 #include "wallpaper_transformation.h"
 
 #include "wpc_imagemagick.h"
@@ -218,34 +218,4 @@ extern void lightdm_set_background(Wallpaper *wallpaper, Monitor *monitor,
     g_free(tmp_file_path);
     g_free(dst_file_path);
     g_free(payload);
-}
-
-extern void lightdm_get_backgrounds(char **primary_monitor,
-                                    char **other_monitor) {
-    char **config = NULL;
-    int lines = 0;
-
-    if (lightdm_parse_config(&config, &lines) != 0) {
-        fprintf(stderr, "Failed to parse config file.\n");
-        return;
-    }
-
-    for (int i = 0; i < lines; i++) {
-        char *line = config[i];
-        char *delimiter = strchr(line, '=');
-
-        if (delimiter) {
-            *delimiter = '\0';
-            char *key = line;
-            char *value = delimiter + 1;
-
-            if (strcmp(key, "background") == 0) {
-                *primary_monitor = strdup(value);
-            } else if (strcmp(key, "other-monitors-logo") == 0) {
-                *other_monitor = strdup(value);
-            }
-        }
-        free(config[i]);
-    }
-    free(config);
 }

@@ -8,16 +8,16 @@
 
 #define CONFIG_FILE ".config/wpc/settings.json"
 
-static bool is_empty_string(const gchar *string_ptr) {
+static gboolean is_empty_string(const gchar *string_ptr) {
     return string_ptr == NULL || g_strcmp0(string_ptr, "") == 0;
 }
 
-static bool validate_src_dir(const gchar *source_directory) {
-    if (is_empty_string(source_directory)) return false;
+static gboolean validate_src_dir(const gchar *source_directory) {
+    if (is_empty_string(source_directory)) return FALSE;
     GDir *dir = g_dir_open(source_directory, 0, NULL);
-    gboolean valid = false;
+    gboolean valid = FALSE;
     if (dir) {
-        valid = true;
+        valid = TRUE;
         g_dir_close(dir);
     }
 
@@ -111,11 +111,11 @@ extern void update_source_directory(Config *config, const gchar *new_src_dir) {
     if (validate_src_dir(new_src_dir)) {
         free(config->source_directory);
         config->source_directory = g_strdup(new_src_dir);
-        config->valid_source_directory = true;
+        config->valid_source_directory = TRUE;
     }
 }
 
-static bool validate_bg_fallback(ConfigMonitor *config) {
+static gboolean validate_bg_fallback(ConfigMonitor *config) {
     gchar *old_color = config->bg_fallback_color;
     if (is_empty_string(old_color)) goto invalidate;
 
@@ -151,14 +151,14 @@ static bool validate_bg_fallback(ConfigMonitor *config) {
     new_color[new_color_index] = '\0';
 
     config->valid_bg_fallback_color = g_strdup(new_color);
-    return true;
+    return TRUE;
 
 warn:
     g_warning("invalid fallback_bg: %s", old_color);
 
 invalidate:
     config->valid_bg_fallback_color = g_strdup("#ff0000");
-    return false;
+    return FALSE;
 }
 
 extern void init_config_monitor(Config *config, const gchar *monitor_name,
@@ -201,7 +201,7 @@ extern Config *load_config() {
     if (file == NULL) {
         get_xdg_pictures_dir(config);
         config->valid_source_directory =
-            validate_src_dir(config->source_directory) ? true : false;
+            validate_src_dir(config->source_directory) ? TRUE : FALSE;
         return config;
     }
 
@@ -255,7 +255,7 @@ extern Config *load_config() {
     }
 
     config->valid_source_directory =
-        validate_src_dir(config->source_directory) ? true : false;
+        validate_src_dir(config->source_directory) ? TRUE : FALSE;
 
     cJSON *monitors_json = cJSON_GetObjectItemCaseSensitive(
         settings_json, "monitorsWithBackgrounds");

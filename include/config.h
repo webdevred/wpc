@@ -23,7 +23,7 @@ typedef struct {
     gushort number_of_monitors;
     ConfigMonitor *monitors_with_backgrounds;
     gchar *source_directory;
-    bool valid_source_directory;
+    gboolean valid_source_directory;
 } Config;
 
 extern void init_config_monitor(Config *config, const gchar *monitor_name,

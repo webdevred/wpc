@@ -14,15 +14,15 @@ static bool check_image(const char *filename) {
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
     if (!magic) {
         fprintf(stderr, "Failed to initialize libmagic\n");
-        return false;
+        return FALSE;
     }
 
     magic_load(magic, NULL);
 
-    bool valid = true;
+    bool valid = TRUE;
     const char *mime_type = magic_file(magic, filename);
     if (!mime_type || strncmp(mime_type, "image/", 6) != 0) {
-        valid = false;
+        valid = FALSE;
         g_info("File %s has invalid MIME type %s", filename, mime_type);
     }
 
@@ -39,7 +39,7 @@ static bool set_width_and_height(Wallpaper *wallpaper) {
                   wallpaper->path);
         DestroyMagickWand(wand);
         MagickWandTerminus();
-        return false;
+        return FALSE;
     }
 
     size_t width = MagickGetImageWidth(wand);
@@ -49,7 +49,7 @@ static bool set_width_and_height(Wallpaper *wallpaper) {
     wallpaper->height = height;
 
     DestroyMagickWand(wand);
-    return true;
+    return TRUE;
 }
 
 extern void free_wallpapers(WallpaperArray *arr) {

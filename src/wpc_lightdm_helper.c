@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <glib.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,9 +15,80 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "common.h"
+#include "lightdm_helper_payload.h"
 
 #define BUFFER_SIZE 1024
+
+#define MAX_LINE_LENGTH 1024
+
+extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr) {
+    FILE *file = fopen(CONFIG_FILE, "r");
+    if (file == NULL) {
+        perror("Error opening configuration file");
+        return -1;
+    }
+
+    int lines = 0;
+    char **config = *config_ptr;
+    char line[MAX_LINE_LENGTH];
+
+    if (config) {
+        for (int i = 0; i < *lines_ptr; i++) {
+            free(config[i]);
+        }
+        free(config);
+        config = NULL;
+    }
+
+    while (fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\n")] = '\0';
+
+        char **temp = realloc(config, (lines + 1) * sizeof(char *));
+        if (temp == NULL) {
+            perror("Error reallocating memory");
+            fclose(file);
+            for (int i = 0; i < lines; i++) {
+                free(config[i]);
+            }
+            free(config);
+            return -1;
+        }
+        config = temp;
+
+        config[lines] = strdup(line);
+        if (config[lines] == NULL) {
+            perror("Error allocating memory for line");
+            fclose(file);
+            for (int i = 0; i < lines; i++) {
+                free(config[i]);
+            }
+            free(config);
+            return -1;
+        }
+        lines++;
+    }
+
+    fclose(file);
+
+    if (lines == 0) {
+        config = malloc(sizeof(char *));
+        if (config == NULL) {
+            perror("Error allocating memory for empty config");
+            return -1;
+        }
+        config[0] = strdup("");
+        if (config[0] == NULL) {
+            perror("Error allocating memory for empty line");
+            free(config);
+            return -1;
+        }
+        lines = 1;
+    }
+
+    *config_ptr = config;
+    *lines_ptr = lines;
+    return 0;
+}
 
 static int create_storage_dir(const char *file_path, mode_t mode) {
     assert(file_path && *file_path);
@@ -68,9 +140,9 @@ static void copy_file(const char *src, const char *dst) {
     close(fd_out);
 }
 
-static bool is_this_line_monitor(char *line, const char *monitor_name) {
+static gboolean is_this_line_monitor(char *line, const char *monitor_name) {
     char *str = strdup(line);
-    bool found = false;
+    gboolean found = FALSE;
     char *delimiter = strstr(str, ": ");
     if (!delimiter) goto end;
 
@@ -89,7 +161,7 @@ static bool is_this_line_monitor(char *line, const char *monitor_name) {
         goto end;
     }
 
-    if (strcmp(second_part, monitor_name) == 0) found = true;
+    if (strcmp(second_part, monitor_name) == 0) found = TRUE;
 
 end:
     free(str);
@@ -114,8 +186,9 @@ static int set_background(const char *scaled_wallpaper_path,
 
     char **config = NULL;
     int lines = 0;
-    bool found_monitor = false;
-    bool updating_monitor = false;
+
+    gboolean found_monitor = FALSE;
+    gboolean updating_monitor = FALSE;
 
     const char *bg_key = "background=";
     const int bg_key_len = strlen(bg_key);
@@ -141,10 +214,10 @@ static int set_background(const char *scaled_wallpaper_path,
                     fprintf(file, "background=%s\n", dst_wallpaper_path);
                 } else {
                     if (is_this_line_monitor(line, monitor_name)) {
-                        updating_monitor = true;
-                        found_monitor = true;
+                        updating_monitor = TRUE;
+                        found_monitor = TRUE;
                     } else if (line[0] == '[') {
-                        updating_monitor = false;
+                        updating_monitor = FALSE;
                     }
 
                     fprintf(file, "%s\n", line);
@@ -169,17 +242,17 @@ static int set_background(const char *scaled_wallpaper_path,
     return 0;
 }
 
-static bool load_payload(const char *payload, char **config_file_path,
-                         char **tmp_file_path, char **dst_file_path,
-                         char **monitor_name) {
+static gboolean load_payload(const char *payload, char **config_file_path,
+                             char **tmp_file_path, char **dst_file_path,
+                             char **monitor_name) {
     cJSON *payload_json = cJSON_Parse(payload);
 
     if (!payload_json) {
         fprintf(stderr, "JSON parsing error\n");
-        return true;
+        return TRUE;
     }
 
-    bool failed = false;
+    gboolean failed = FALSE;
 
     cJSON *config_file_path_json =
         cJSON_GetObjectItemCaseSensitive(payload_json, "configFilePath");
@@ -188,7 +261,7 @@ static bool load_payload(const char *payload, char **config_file_path,
         *config_file_path = strdup(config_file_path_json->valuestring);
     } else {
         fprintf(stderr, "Failed to parse configFilePath\n");
-        failed = true;
+        failed = TRUE;
     }
 
     cJSON *tmp_file_path_json =
@@ -197,7 +270,7 @@ static bool load_payload(const char *payload, char **config_file_path,
         *tmp_file_path = strdup(tmp_file_path_json->valuestring);
     } else {
         fprintf(stderr, "Failed to parse tmpFilePath\n");
-        failed = true;
+        failed = TRUE;
     }
 
     cJSON *dst_file_path_json =
@@ -206,7 +279,7 @@ static bool load_payload(const char *payload, char **config_file_path,
         *dst_file_path = strdup(dst_file_path_json->valuestring);
     } else {
         fprintf(stderr, "Failed to parse dstFilePath\n");
-        failed = true;
+        failed = TRUE;
     }
 
     cJSON *monitor_name_json =
@@ -215,7 +288,7 @@ static bool load_payload(const char *payload, char **config_file_path,
         *monitor_name = strdup(monitor_name_json->valuestring);
     } else {
         fprintf(stderr, "Failed to parse monitorName\n");
-        failed = true;
+        failed = TRUE;
     }
 
     cJSON_Delete(payload_json);

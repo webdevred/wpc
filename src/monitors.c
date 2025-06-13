@@ -95,7 +95,7 @@ extern MonitorArray *list_monitors(const bool virtual_monitors) {
             monitors[i].top_y = x_monitors[i].y;
             monitors[i].primary = x_monitors[i].primary;
 
-            monitors[i].belongs_to_config = false;
+            monitors[i].belongs_to_config = FALSE;
             monitors[i].config_id = 0;
             monitors[i].wallpaper = NULL;
         }
@@ -144,7 +144,7 @@ extern MonitorArray *list_monitors(const bool virtual_monitors) {
                     XRRFreeCrtcInfo(crtcInfo);
 
                     monitors[i].wallpaper = NULL;
-                    monitors[i].belongs_to_config = false;
+                    monitors[i].belongs_to_config = FALSE;
                     monitors[i].config_id = 0;
                 }
             }

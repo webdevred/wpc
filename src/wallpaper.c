@@ -100,7 +100,7 @@ extern void set_wallpapers(Config *config, MonitorArray *mon_arr_wrapper) {
                 wallpaper_path = monitor_bgs[w].image_path;
                 bg_fallback_color = monitor_bgs[w].valid_bg_fallback_color;
                 bg_mode = monitor_bgs[w].bg_mode;
-                found = true;
+                found = TRUE;
                 break;
             }
         }

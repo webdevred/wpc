@@ -3,14 +3,13 @@
 #include <X11/extensions/Xrandr.h>
 #include <filesystem.h>
 #include <glib.h>
-#include <stdbool.h>
 
 typedef struct {
     gushort width, height;
     gshort left_x, top_y;
     gushort config_id;
-    bool belongs_to_config;
-    bool primary;
+    gboolean belongs_to_config;
+    gboolean primary;
     gchar *name;
     Wallpaper *wallpaper;
 } Monitor;

@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #define _FILE_OFFSET_BITS 64
 
+#include "common.h"
 #include <assert.h>
 #include <cjson/cJSON.h>
 #include <dirent.h>
@@ -90,21 +91,6 @@ extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr) {
     return 0;
 }
 
-static int create_storage_dir(const char *file_path, mode_t mode) {
-    assert(file_path && *file_path);
-    for (char *p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
-        *p = '\0';
-        if (mkdir(file_path, mode) == -1) {
-            if (errno != EEXIST) {
-                *p = '/';
-                return -1;
-            }
-        }
-        *p = '/';
-    }
-    return 0;
-}
-
 static void copy_file(const char *src, const char *dst) {
     int fd_in, fd_out;
     off_t len, ret;
@@ -176,7 +162,7 @@ static int set_background(const char *scaled_wallpaper_path,
     if (dir) {
         closedir(dir);
     } else if (errno == ENOENT) {
-        if (create_storage_dir(dst_wallpaper_path, 0775) != 0) {
+        if (create_parent_dirs(dst_wallpaper_path, 0775) != 0) {
             fprintf(stderr, "Failed to create storage directory");
             return 1;
         }

@@ -33,7 +33,7 @@ endif
 ifeq ($(WPC_HELPER), 1)
     WPC_SRCS += $(SRC_DIR)/lightdm.c
     WPC_CFLAGS += -DWPC_ENABLE_HELPER
-    HELPER_SRCS := $(SRC_DIR)/wpc_lightdm_helper.c
+    HELPER_SRCS := $(SRC_DIR)/wpc_lightdm_helper.c $(SRC_DIR)/common.c
 endif
 
 WPC_OBJS := $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(WPC_SRCS))
@@ -78,7 +78,7 @@ endif
 iwyu:
 	@for file in $(WPC_SRCS) $(HELPER_SRCS); do \
 		echo "Running iwyu on $$file..."; \
-		include-what-you-use -Xiwyu --transitive_includes_only -std=c23 $(WPC_CFLAGS) $(WPC_LDFLAGS) -I$(INCLUDE_DIR) $$file; \
+		include-what-you-use -Xiwyu --transitive_includes_only -std=gnu11 $(WPC_CFLAGS) $(WPC_LDFLAGS) -I$(INCLUDE_DIR) $$file; \
 	done
 
 clean:

@@ -16,9 +16,9 @@ Atom wmDeleteWindow;
 XContext xid_context = 0;
 
 #ifdef WPC_IMAGEMAGICK_7
-const char *pixel_format = "RGBA";
-#else
 const char *pixel_format = "BGRA";
+#else
+const char *pixel_format = "RGBA";
 #endif
 
 static void set_bg_for_monitor(const gchar *wallpaper_path,

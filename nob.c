@@ -31,6 +31,10 @@ void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
     }
 
     nob_cc_flags(cmd);
+    if (enable_dev_tooling)
+        nob_cmd_append(cmd, "-g", "-fsanitize=address",
+                       "-fno-omit-frame-pointer");
+
     nob_cmd_append(cmd, lib);
     uint nmain_flags = main_flags->count;
     uint ncommon_flags = common_flags->count;
@@ -151,7 +155,8 @@ Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,
                     continue;
                 }
             } else if (strcmp(target, "wpc_lightdm_helper") == 0) {
-                if (strcmp(object, "wpc_lightdm_helper.o") == 0) {
+                if (strcmp(object, "wpc_lightdm_helper.o") == 0 ||
+                    strcmp(object, "common.o") == 0) {
                     nob_da_append(&objects, object_place);
                 } else {
                     continue;
@@ -205,7 +210,7 @@ int build_target(Nob_Cmd *cmd, const char *target, Nob_File_Paths objects,
 void should_use_imagemagick7(Nob_Cmd *cmd) {
     char *imagemagick_version_env = getenv("WPC_IMAGEMAGICK_7");
     if (imagemagick_version_env != NULL) {
-        use_imagemagick7 = strcmp(imagemagick_version_env, "0") != 0;
+        use_imagemagick7 = strcmp(imagemagick_version_env, "1") == 0;
         goto log;
     }
 
@@ -227,11 +232,10 @@ void should_use_imagemagick7(Nob_Cmd *cmd) {
     free(buffer);
     cmd->count = 0;
 log:
-    char imagemagick_version = use_imagemagick7 ? '7' : '6';
     nob_log(NOB_INFO,
             "Chosen ImageMagick version: %c based on environment or system "
             "detection",
-            imagemagick_version);
+            use_imagemagick7 ? '7' : '6');
     return;
 }
 

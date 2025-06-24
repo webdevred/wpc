@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
 #include "config.h"
 
 #define CONFIG_FILE ".config/wpc/settings.json"
@@ -344,7 +345,9 @@ extern Config *load_config() {
 }
 
 extern void dump_config(Config *config) {
-    FILE *file = fopen(get_config_file(), "w");
+    char *filename = get_config_file();
+    create_parent_dirs(filename, 0770);
+    FILE *file = fopen(filename, "w");
     if (file == NULL) {
         perror("Error opening configuration file");
         exit(1);

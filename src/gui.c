@@ -137,6 +137,12 @@ static void show_images_src_dir(GtkApplication *app) {
     WallpaperArray *mon_wrap = g_object_get_data(G_OBJECT(app), "monitors");
     Monitor *monitors = (Monitor *)mon_wrap->data;
     gushort monitor_id;
+
+    for (monitor_id = 0; monitor_id < mon_wrap->amount_used; monitor_id++) {
+        Monitor *monitor = &monitors[monitor_id];
+        monitor->wallpaper = NULL;
+    }
+
     if (wallpapers) {
         gtk_flow_box_set_sort_func(GTK_FLOW_BOX(flowbox), NULL, NULL, NULL);
         gushort i;
@@ -366,6 +372,7 @@ static void storage_dir_chosen(GObject *source_object, GAsyncResult *res,
         g_warning("Error code: %d Error: %s", err->code, err->message);
         return;
     }
+
     new_src_dir = g_file_get_path(dir);
 
     update_source_directory(config, new_src_dir);

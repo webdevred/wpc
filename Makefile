@@ -53,11 +53,11 @@ endif
 all: $(TARGETS) bc compile_commands
 
 wpc: $(WPC_OBJS)
-	$(CC) $(WPC_OBJS) $(WPC_LDFLAGS) -o $@
+	$(CC) $(WPC_OBJS) $(WPC_LDFLAGS) -o $(BUILD_DIR)/$@
 
 ifeq ($(WPC_HELPER), 1)
 wpc_lightdm_helper: $(HELPER_OBJS)
-	$(CC) $(HELPER_OBJS) $(HELPER_LDFLAGS) -o $@
+	$(CC) $(HELPER_OBJS) $(HELPER_LDFLAGS) -o $(BUILD_DIR)/$@
 endif
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)

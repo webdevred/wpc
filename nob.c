@@ -180,14 +180,15 @@ Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,
                 }
             }
 
-            nob_cmd_append(cmd, "clang");
-
             if (enable_dev_tooling) {
+                nob_cmd_append(cmd, "clang");
                 ext--;
                 *ext = '\0';
                 nob_cmd_append(
                     cmd, "-MJ",
                     nob_temp_sprintf("%s/%s.json", BUILD_FOLDER, object));
+            } else {
+                nob_cc(cmd);
             }
 
             build_object(cmd, main_cflags, common_cflags);
@@ -209,7 +210,7 @@ Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,
 
 int build_target(Nob_Cmd *cmd, const char *target, Nob_File_Paths objects,
                  LibFlagsDa *main_ldflags, LibFlagsDa *common_ldflags) {
-    nob_cmd_append(cmd, "clang");
+    nob_cc(cmd);
     const char *out_file = nob_temp_sprintf("%s/%s", BUILD_FOLDER, target);
     uint nobjects = objects.count;
     for (uint i = 0; i < nobjects; i++) {

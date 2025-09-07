@@ -1,3 +1,4 @@
+#define NOB_WARN_DEPRECATED
 #define NOB_IMPLEMENTATION
 
 #include "nob.h"

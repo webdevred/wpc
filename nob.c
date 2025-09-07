@@ -125,6 +125,23 @@ LibFlagsDa list_lib_ldflags(Nob_Cmd *cmd, char *lib_names[]) {
     return list_lib_flags(cmd, lib_names, false);
 }
 
+void create_compilation_database(Nob_File_Paths files) {
+    FILE *comp_db = fopen("compile_commands.json", "w");
+    uint i;
+    Nob_String_Builder builder = {0};
+    char *content;
+    fwrite("[\n", sizeof(char), 2, comp_db);
+    for (i = 0; i < files.count; i++) {
+        builder.count = 0;
+        nob_read_entire_file(nob_temp_sprintf("%s.json", files.items[i]),
+                             &builder);
+        nob_log(NOB_INFO, "adding %s to compilation database", files.items[i]);
+        fwrite("  ", sizeof(char), 2, comp_db);
+        fwrite(builder.items, sizeof(char), builder.count, comp_db);
+    }
+    fwrite("]\n", sizeof(char), 2, comp_db);
+}
+
 Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,
                                   LibFlagsDa *main_cflags,
                                   LibFlagsDa *common_cflags) {
@@ -306,6 +323,9 @@ int main(int argc, char **argv) {
 
         build_target(&cmd, "wpc_lightdm_helper", helper_objects,
                      &wpc_helper_ldflags, &wpc_common_ldflags);
+    }
+    if (enable_dev_tooling) {
+        create_compilation_database(object_names);
     }
     nob_da_free(wpc_cflags);
     nob_da_free(wpc_ldflags);

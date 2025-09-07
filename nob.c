@@ -199,8 +199,7 @@ Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,
             nob_cc_inputs(
                 cmd, nob_temp_sprintf("%s/%s", SRC_FOLDER, files.items[i]));
             nob_cc_output(cmd, object_place);
-            if (!nob_cmd_run_sync_and_reset(cmd)) exit(1);
-            cmd->count = 0;
+            if (!nob_cmd_run(cmd)) exit(1);
             free(object);
         }
     }
@@ -220,7 +219,7 @@ int build_target(Nob_Cmd *cmd, const char *target, Nob_File_Paths objects,
 
     nob_cc_output(cmd, out_file);
 
-    if (!nob_cmd_run_sync_and_reset(cmd)) return 1;
+    if (!nob_cmd_run(cmd)) return 1;
     cmd->count = 0;
     return 0;
 }

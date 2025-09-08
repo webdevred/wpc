@@ -16,7 +16,9 @@ __attribute__((used)) static void _mark_magick_used(void) {
 extern int set_backgrounds_and_exit() {
     Config *config = load_config();
     MonitorArray *monitor_array = list_monitors(TRUE);
-    set_wallpapers(config, monitor_array);
+    WallpaperQueue *queue = new_wallpaper_queue(config->source_directory);
+    set_wallpapers(config, queue, monitor_array);
+    free_wallpaper_queue(queue);
     free_config(config);
     free_monitors(monitor_array);
     return 0;
@@ -39,11 +41,12 @@ extern int fork_and_exit() {
         init_x11();
         MonitorArray *monitor_array = list_monitors(TRUE);
         MagickWandGenesis();
-
+        WallpaperQueue *queue = new_wallpaper_queue(config->source_directory);
         while (!terminate) {
-            set_wallpapers(config, monitor_array);
-            sleep(5000);
+            set_wallpapers(config, queue, monitor_array);
+            sleep(350);
         }
+        free_wallpaper_queue(queue);
 
         free_config(config);
         free_monitors(monitor_array);

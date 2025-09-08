@@ -62,6 +62,34 @@ extern void free_wallpapers(WallpaperArray *arr) {
     free(arr);
 }
 
+extern WallpaperQueue *new_wallpaper_queue(gchar *source_directory) {
+    WallpaperArray *wallpapers = list_wallpapers(source_directory);
+    WallpaperQueue *queue = malloc(sizeof(WallpaperQueue));
+    queue->wallpapers = wallpapers;
+    queue->current_wallpaper = 0;
+    return queue;
+}
+
+extern void free_wallpaper_queue(WallpaperQueue *queue) {
+    free_wallpapers(queue->wallpapers);
+    free(queue);
+}
+
+gchar *next_wallpaper_in_queue(WallpaperQueue *queue) {
+    WallpaperArray *array = queue->wallpapers;
+
+    if (array->amount_used == 0) {
+        return NULL;
+    }
+
+    gchar *path = array->data[queue->current_wallpaper].path;
+
+    queue->current_wallpaper =
+        (queue->current_wallpaper + 1) % array->amount_used;
+
+    return path;
+}
+
 extern WallpaperArray *list_wallpapers(gchar *source_directory) {
     DIR *dir = opendir(source_directory);
     if (!dir) {

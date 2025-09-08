@@ -1,8 +1,10 @@
+#include "filesystem.h"
 #include "glib.h"
 #include "monitors.h"
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <string.h>
 
 #include "wallpaper.h"
 #include "wallpaper_transformation.h"
@@ -71,7 +73,8 @@ static Atom get_atom(Display *display, char *atom_name, Bool only_if_exists) {
     return atom;
 }
 
-extern void set_wallpapers(Config *config, MonitorArray *mon_arr_wrapper) {
+extern void set_wallpapers(Config *config, WallpaperQueue *queue,
+                           MonitorArray *mon_arr_wrapper) {
     GC gc;
 
     Atom prop_root, prop_esetroot;
@@ -105,7 +108,16 @@ extern void set_wallpapers(Config *config, MonitorArray *mon_arr_wrapper) {
             }
         }
 
-        if (!found) continue;
+        if (!found) {
+            if (queue != NULL) {
+                wallpaper_path = next_wallpaper_in_queue(queue);
+                if (wallpaper_path == NULL) continue;
+                g_info("couldnt find configured wallapaper, selected %s",
+                       wallpaper_path);
+            } else {
+                continue;
+            }
+        }
 
         g_info("set filled bg: %s %s %d %d %d %d", monitor->name,
                wallpaper_path, monitor->width, monitor->height, monitor->left_x,

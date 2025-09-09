@@ -1,9 +1,8 @@
+#include <unistd.h>
 #define NOB_WARN_DEPRECATED
 #define NOB_IMPLEMENTATION
 
 #include "nob.h"
-
-#include <ctype.h>
 // Some folder paths that we use throughout the build process.
 #define BUILD_FOLDER "build"
 #define SRC_FOLDER "src"
@@ -49,49 +48,29 @@ void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
     }
 }
 
-char *run_cmd_and_get_output(Nob_Cmd *cmd) {
-    int pipefd[2];
-    if (pipe(pipefd) == -1) {
-        perror("pipe");
-        return NULL;
-    }
+char *run_cmd_and_get_output(Nob_Cmd *cmd, char *tmp_filename) {
+    char template[] = "/tmp/tmpdir.wpc-nob-XXXXXX";
+    char *dir_name = mkdtemp(template);
+    char *file_path = nob_temp_sprintf("%s/%s.txt", dir_name, tmp_filename);
+    Nob_String_Builder builder = {0};
 
-    Nob_Cmd_Redirect cmd_red = {0};
-    cmd_red.fdout = &pipefd[1];
-    nob_cmd_run_async_redirect(*cmd, cmd_red);
-    cmd->count = 0;
+    nob_cmd_run(cmd, .stdout_path = file_path);
 
-    close(pipefd[1]);
-
-    char *buffer = NULL;
-    size_t total_size = 0;
-    char tmp_buffer[256];
-
-    ssize_t bytes_read;
-    while ((bytes_read = read(pipefd[0], tmp_buffer, sizeof(tmp_buffer))) > 0) {
-        char *new_buffer = realloc(buffer, total_size + bytes_read + 1);
-        if (!new_buffer) {
-            free(buffer);
-            close(pipefd[0]);
-            return NULL;
-        }
-        buffer = new_buffer;
-        memcpy(buffer + total_size, tmp_buffer, bytes_read);
-        total_size += bytes_read;
-    }
-
-    if (buffer) {
-        buffer[total_size] = '\0';
-    }
-
-    close(pipefd[0]);
-    return buffer;
+    nob_read_entire_file(file_path, &builder);
+    char *output = strdup(builder.items);
+    unlink(file_path);
+    rmdir(dir_name);
+    nob_da_free(builder);
+    return output;
 }
 
 LibFlagsDa list_lib_flags(Nob_Cmd *cmd, char *lib_names[], bool cflags) {
+    char *name;
     if (cflags) {
+        name = strdup("lib_cflags");
         nob_cmd_append(cmd, "pkg-config", "--cflags");
     } else {
+        name = strdup("lib_flags");
         nob_cmd_append(cmd, "pkg-config", "--libs");
     }
 
@@ -101,7 +80,7 @@ LibFlagsDa list_lib_flags(Nob_Cmd *cmd, char *lib_names[], bool cflags) {
         lib_name++;
     }
 
-    char *buffer = run_cmd_and_get_output(cmd);
+    char *buffer = run_cmd_and_get_output(cmd, name);
 
     LibFlagsDa lib_places = {0};
     char *lib = strtok(buffer, " ");
@@ -113,6 +92,7 @@ LibFlagsDa list_lib_flags(Nob_Cmd *cmd, char *lib_names[], bool cflags) {
         nob_da_append(&lib_places, strdup(lib));
         lib += strlen(lib) + 1;
     }
+    free(name);
     free(buffer);
     cmd->count = 0;
     return lib_places;
@@ -236,7 +216,7 @@ void should_use_imagemagick7(Nob_Cmd *cmd) {
                       "version using pkg-config...");
     nob_cmd_append(cmd, "pkg-config", "--modversion", "MagickWand");
 
-    char *buffer = run_cmd_and_get_output(cmd);
+    char *buffer = run_cmd_and_get_output(cmd, "imagemagick");
 
     if (strncmp(buffer, "7.", 2) == 0) {
         use_imagemagick7 = true;

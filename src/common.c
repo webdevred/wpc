@@ -1,4 +1,5 @@
-#include "common.h"
+// Copyright 2025 webdevred
+
 #include <assert.h>
 #include <cjson/cJSON.h>
 #include <dirent.h>
@@ -7,6 +8,8 @@
 #include <glib.h>
 #include <libgen.h>
 #include <string.h>
+
+#include "wpc/common.h"
 
 extern int create_parent_dirs(const char *file_path, mode_t mode) {
     assert(file_path && *file_path);

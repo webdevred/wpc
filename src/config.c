@@ -1,11 +1,13 @@
+// Copyright 2025 webdevred
+
 #include <cjson/cJSON.h>
 #include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "common.h"
-#include "config.h"
+#include "wpc/common.h"
+#include "wpc/config.h"
 
 #define CONFIG_FILE ".config/wpc/settings.json"
 
@@ -221,6 +223,7 @@ extern Config *load_config() {
 
     while (fgets(line, sizeof(line), file)) {
         size_t line_len = strlen(line);
+
         if (file_size + line_len + 1 > capacity) {
             capacity *= 2;
             gchar *temp = realloc(file_content, capacity);
@@ -233,9 +236,11 @@ extern Config *load_config() {
             }
             file_content = temp;
         }
-        strcat(file_content, line);
+
+        memcpy(file_content + file_size, line, line_len + 1);
         file_size += line_len;
     }
+
     fclose(file);
 
     cJSON *settings_json = cJSON_Parse(file_content);

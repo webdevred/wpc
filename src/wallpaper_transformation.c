@@ -1,8 +1,10 @@
-#include "wallpaper_transformation.h"
-#include "rendering_region.h"
+// Copyright 2025 webdevred
+
 #include <glib.h>
 
-#include "wpc_imagemagick.h"
+#include "wpc/rendering_region.h"
+#include "wpc/wallpaper_transformation.h"
+#include "wpc/wpc_imagemagick.h"
 __attribute__((used)) static void _mark_magick_used(void) {
     _wpc_magick_include_marker();
 }

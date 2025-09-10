@@ -1,16 +1,18 @@
+// Copyright 2025 webdevred
+
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "config.h"
-#include "filesystem.h"
-#include "gui.h"
-#include "monitors.h"
-#include "wallpaper.h"
+#include "wpc/config.h"
+#include "wpc/filesystem.h"
+#include "wpc/gui.h"
+#include "wpc/monitors.h"
+#include "wpc/wallpaper.h"
 
 #ifdef WPC_ENABLE_HELPER
-#include "lightdm.h"
+#include "wpc/lightdm.h"
 #endif
 
 typedef enum { DM_BACKGROUND = 0, WM_BACKGROUND } AppTab;
@@ -405,7 +407,8 @@ void free_child_widget(GtkWidget *widget) {
     GtkWidget *sub_widget;
     while ((sub_widget = gtk_widget_get_first_child(widget)) != NULL) {
         g_print("Freeing child widget: %p\n", sub_widget);
-        free_child_widget(sub_widget); // Recursively clean up child widgets
+        // Recursively clean up child widgets
+        free_child_widget(sub_widget);
     }
     gtk_widget_unparent(widget);
     g_print("Freeing widget: %p\n", widget);

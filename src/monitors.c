@@ -1,8 +1,10 @@
+// Copyright 2025 webdevred
+
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 #include <glib.h>
 
-#include "monitors.h"
+#include "wpc/monitors.h"
 
 Display *querying_display = NULL;
 Window querying_root = 0;

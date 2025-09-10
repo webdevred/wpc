@@ -1,3 +1,5 @@
+// Copyright 2025 webdevred
+
 #include <cjson/cJSON.h>
 #include <ctype.h>
 #include <glib.h>
@@ -7,11 +9,11 @@
 #include <unistd.h>
 
 #define DM_CONFIG_PAYLOAD
-#include "lightdm.h"
-#include "lightdm_helper_payload.h"
-#include "wallpaper_transformation.h"
+#include "wpc/lightdm.h"
+#include "wpc/lightdm_helper_payload.h"
+#include "wpc/wallpaper_transformation.h"
 
-#include "wpc_imagemagick.h"
+#include "wpc/wpc_imagemagick.h"
 __attribute__((used)) static void _mark_magick_used(void) {
     _wpc_magick_include_marker();
 }
@@ -157,7 +159,6 @@ static void spawn_process_and_handle_io(char **argv, const char *payload) {
 static void dump_payload(char **payload, const char *config_file_path,
                          const char *tmp_file_path, const char *dst_file_path,
                          const char *monitor_name) {
-
     cJSON *payload_json = cJSON_CreateObject();
 
     cJSON_AddStringToObject(payload_json, "configFilePath", config_file_path);

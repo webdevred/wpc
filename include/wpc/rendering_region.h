@@ -1,7 +1,7 @@
 #pragma once
 
 #include "config.h"
-#include "monitors.h"
+#include "wpc/monitors.h"
 #include <glib.h>
 
 typedef struct _MagickWand MagickWand;

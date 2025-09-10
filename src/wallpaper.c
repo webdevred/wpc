@@ -1,15 +1,17 @@
-#include "filesystem.h"
-#include "glib.h"
-#include "monitors.h"
+// Copyright 2025 webdevred
+
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <glib.h>
 #include <string.h>
 
-#include "wallpaper.h"
-#include "wallpaper_transformation.h"
+#include "wpc/filesystem.h"
+#include "wpc/monitors.h"
+#include "wpc/wallpaper.h"
+#include "wpc/wallpaper_transformation.h"
 
-#include "wpc_imagemagick.h"
+#include "wpc/wpc_imagemagick.h"
 __attribute__((used)) static void _mark_magick_used(void) {
     _wpc_magick_include_marker();
 }

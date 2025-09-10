@@ -1,8 +1,8 @@
 #pragma once
 
-#include "config.h"
-#include "filesystem.h"
-#include "monitors.h"
+#include "wpc/config.h"
+#include "wpc/filesystem.h"
+#include "wpc/monitors.h"
 
 extern void set_wallpapers(Config *config, WallpaperQueue *queue,
                            MonitorArray *mon_arr_wrapper);

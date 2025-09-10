@@ -1,11 +1,13 @@
+// Copyright 2025 webdevred
+
 #include <dirent.h>
 #include <glib.h>
 #include <magic.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "filesystem.h"
-#include "wpc_imagemagick.h"
+#include "wpc/filesystem.h"
+#include "wpc/wpc_imagemagick.h"
 __attribute__((used)) static void _mark_magick_used(void) {
     _wpc_magick_include_marker();
 }

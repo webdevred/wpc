@@ -1,4 +1,6 @@
-#include "options.h"
+// Copyright 2025 webdevred
+
+#include "wpc/options.h"
 
 void parse_options(char **argv, Options *options) {
     argv++;

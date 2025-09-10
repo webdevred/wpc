@@ -1,5 +1,7 @@
-#include "rendering_region.h"
-#include "wpc_imagemagick.h"
+// Copyright 2025 webdevred
+
+#include "wpc/rendering_region.h"
+#include "wpc/wpc_imagemagick.h"
 
 /*
  * Function: create_rendering_region

@@ -1,7 +1,8 @@
+// Copyright 2025 webdevred
+
 #define _GNU_SOURCE
 #define _FILE_OFFSET_BITS 64
 
-#include "common.h"
 #include <assert.h>
 #include <cjson/cJSON.h>
 #include <dirent.h>
@@ -16,7 +17,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "lightdm_helper_payload.h"
+#include "wpc/common.h"
+#include "wpc/lightdm_helper_payload.h"
 
 #define BUFFER_SIZE 1024
 

@@ -1,14 +1,16 @@
-#include "gui.h"
+// Copyright 2025 webdevred
+
+#include <glib.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <sys/types.h>
 
-#include "monitors.h"
-#include "options.h"
-#include "wallpaper.h"
-#include <glib.h>
+#include "wpc/gui.h"
+#include "wpc/monitors.h"
+#include "wpc/options.h"
+#include "wpc/wallpaper.h"
 
-#include "wpc_imagemagick.h"
+#include "wpc/wpc_imagemagick.h"
 __attribute__((used)) static void _mark_magick_used(void) {
     _wpc_magick_include_marker();
 }

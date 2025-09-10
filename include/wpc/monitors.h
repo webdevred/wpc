@@ -1,8 +1,8 @@
 #pragma once
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
-#include <filesystem.h>
 #include <glib.h>
+#include <wpc/filesystem.h>
 
 typedef struct {
     gushort width, height;

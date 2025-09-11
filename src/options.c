@@ -17,6 +17,8 @@ void parse_options(char **argv, Options *options) {
         case 'd':
             options->action = DAEMON_SET_BACKGROUNDS;
             break;
+        default:
+            break;
         }
         (*argv)++;
     }

@@ -1,6 +1,9 @@
 #pragma once
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
 #include <gtk/gtk.h>
+#pragma clang diagnostic pop
 
 typedef struct {
     size_t width, height;

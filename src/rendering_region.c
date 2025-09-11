@@ -25,12 +25,12 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
 
     size_t img_w, img_h;
 
-    gushort mon_w = monitor->width;
-    gushort mon_h = monitor->height;
+    gulong mon_w = monitor->width;
+    gulong mon_h = monitor->height;
 
     bool border_x, cut_x;
-    gushort scaled_w, scaled_h;
-    gushort margin_x, margin_y;
+    gulong scaled_w, scaled_h;
+    ssize_t margin_x, margin_y;
 
     img_w = MagickGetImageWidth(wand);
     img_h = MagickGetImageHeight(wand);
@@ -59,8 +59,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
            monitor. */
         rr.src_x = 0;
         rr.src_y = 0;
-        rr.monitor_x = (mon_w - img_w) / 2;
-        rr.monitor_y = (mon_h - img_h) / 2;
+        rr.monitor_x = (glong)(mon_w - img_w) / 2;
+        rr.monitor_y = (glong)(mon_h - img_h) / 2;
         rr.width = img_w;
         rr.height = img_h;
         break;
@@ -77,8 +77,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         // Similarly, determine the height.
         rr.height = !border_x ? ((mon_w * img_h) / img_w) : mon_h;
         // Calculate margins to center the scaled image.
-        margin_x = (mon_w - rr.width) / 2;
-        margin_y = (mon_h - rr.height) / 2;
+        margin_x = (glong)(mon_w - rr.width) / 2;
+        margin_y = (glong)(mon_h - rr.height) / 2;
         rr.monitor_x = (border_x ? margin_x : 0);
         rr.monitor_y = (!border_x ? margin_y : 0);
         break;
@@ -98,8 +98,8 @@ create_rendering_region(MagickWand *wand, Monitor *monitor, BgMode bg_mode) {
         rr.width = cut_x ? scaled_w : mon_w;
         rr.height = cut_x ? mon_h : scaled_h;
         // Calculate the source offsets to center the crop.
-        rr.src_x = cut_x ? ((scaled_w - mon_w) / 2) : 0;
-        rr.src_y = !cut_x ? ((scaled_h - mon_h) / 2) : 0;
+        rr.src_x = cut_x ? ((glong)(scaled_w - mon_w) / 2) : 0;
+        rr.src_y = !cut_x ? ((glong)(scaled_h - mon_h) / 2) : 0;
     }
     return rr;
 }

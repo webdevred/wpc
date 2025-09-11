@@ -12,6 +12,7 @@
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -24,19 +25,21 @@
 
 #define MAX_LINE_LENGTH 1024
 
-extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr) {
+static int lightdm_parse_config(char ***config_ptr, gulong *lines_ptr) {
+    char **temp, **config;
+    guint lines;
+    char line[MAX_LINE_LENGTH];
     FILE *file = fopen(CONFIG_FILE, "r");
     if (file == NULL) {
         perror("Error opening configuration file");
         return -1;
     }
 
-    int lines = 0;
-    char **config = *config_ptr;
-    char line[MAX_LINE_LENGTH];
+    lines = 0;
+    config = *config_ptr;
 
     if (config) {
-        for (int i = 0; i < *lines_ptr; i++) {
+        for (guint i = 0; i < *lines_ptr; i++) {
             free(config[i]);
         }
         free(config);
@@ -46,11 +49,11 @@ extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr) {
     while (fgets(line, sizeof(line), file)) {
         line[strcspn(line, "\n")] = '\0';
 
-        char **temp = realloc(config, (lines + 1) * sizeof(char *));
+        temp = realloc(config, (lines + 1) * sizeof(char *));
         if (temp == NULL) {
             perror("Error reallocating memory");
             fclose(file);
-            for (int i = 0; i < lines; i++) {
+            for (guint i = 0; i < lines; i++) {
                 free(config[i]);
             }
             free(config);
@@ -62,7 +65,7 @@ extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr) {
         if (config[lines] == NULL) {
             perror("Error allocating memory for line");
             fclose(file);
-            for (int i = 0; i < lines; i++) {
+            for (guint i = 0; i < lines; i++) {
                 free(config[i]);
             }
             free(config);
@@ -115,7 +118,7 @@ static void copy_file(const char *src, const char *dst) {
     }
 
     do {
-        ret = copy_file_range(fd_in, NULL, fd_out, NULL, len, 0);
+        ret = copy_file_range(fd_in, NULL, fd_out, NULL, (size_t)len, 0);
         if (ret == -1) {
             perror("copy_file_range");
             exit(EXIT_FAILURE);
@@ -129,20 +132,21 @@ static void copy_file(const char *src, const char *dst) {
 }
 
 static gboolean is_this_line_monitor(char *line, const char *monitor_name) {
+    char *first_part, *second_part, *last_char;
     char *str = strdup(line);
     gboolean found = FALSE;
     char *delimiter = strstr(str, ": ");
     if (!delimiter) goto end;
 
     *delimiter = '\0';
-    char *first_part = str;
-    char *second_part = delimiter + 2;
+    first_part = str;
+    second_part = delimiter + 2;
 
     if (strcmp(first_part, "[monitor") != 0) {
         goto end;
     }
 
-    char *last_char = &second_part[strlen(second_part) - 1];
+    last_char = &second_part[strlen(second_part) - 1];
     if (*last_char == ']') {
         *last_char = '\0';
     } else {
@@ -156,11 +160,18 @@ end:
     return found;
 }
 
+static const char bg_key[] = "background=";
+
 static int set_background(const char *scaled_wallpaper_path,
                           const char *dst_wallpaper_path,
                           const char *monitor_name) {
-    char *storage_directory = dirname(strdup(dst_wallpaper_path));
-    DIR *dir = opendir(storage_directory);
+    gboolean found_monitor, updating_monitor;
+    gulong lines,  bg_key_len;
+    char **config, *storage_directory;
+    DIR *dir;
+    bg_key_len = strlen(bg_key);
+    storage_directory = dirname(strdup(dst_wallpaper_path));
+    dir = opendir(storage_directory);
     if (dir) {
         closedir(dir);
     } else if (errno == ENOENT) {
@@ -172,28 +183,25 @@ static int set_background(const char *scaled_wallpaper_path,
 
     copy_file(scaled_wallpaper_path, dst_wallpaper_path);
 
-    char **config = NULL;
-    int lines = 0;
+    config = NULL;
+    lines = 0;
 
-    gboolean found_monitor = FALSE;
-    gboolean updating_monitor = FALSE;
-
-    const char *bg_key = "background=";
-    const int bg_key_len = strlen(bg_key);
+    found_monitor = FALSE;
+    updating_monitor = FALSE;
 
     if (lightdm_parse_config(&config, &lines) == 0) {
         FILE *file = fopen(CONFIG_FILE, "w");
         if (file == NULL) {
             fprintf(stderr, "Error opening configuration file for writing");
             free(storage_directory);
-            for (int i = 0; i < lines; i++) {
+            for (guint i = 0; i < lines; i++) {
                 free(config[i]);
             }
             free(config);
             return 1;
         }
 
-        for (int i = 0; i < lines; i++) {
+        for (guint i = 0; i < lines; i++) {
             char *line = config[i];
 
             if (strcmp(line, "") != 0) {
@@ -233,16 +241,19 @@ static int set_background(const char *scaled_wallpaper_path,
 static gboolean load_payload(const char *payload, char **config_file_path,
                              char **tmp_file_path, char **dst_file_path,
                              char **monitor_name) {
-    cJSON *payload_json = cJSON_Parse(payload);
+    cJSON *config_file_path_json, *payload_json, *tmp_file_path_json,
+        *dst_file_path_json, *monitor_name_json;
+    gboolean failed;
+    payload_json = cJSON_Parse(payload);
 
     if (!payload_json) {
         fprintf(stderr, "JSON parsing error\n");
         return TRUE;
     }
 
-    gboolean failed = FALSE;
+    failed = FALSE;
 
-    cJSON *config_file_path_json =
+    config_file_path_json =
         cJSON_GetObjectItemCaseSensitive(payload_json, "configFilePath");
     if (cJSON_IsString(config_file_path_json) &&
         config_file_path_json->valuestring) {
@@ -252,7 +263,7 @@ static gboolean load_payload(const char *payload, char **config_file_path,
         failed = TRUE;
     }
 
-    cJSON *tmp_file_path_json =
+    tmp_file_path_json =
         cJSON_GetObjectItemCaseSensitive(payload_json, "tmpFilePath");
     if (cJSON_IsString(tmp_file_path_json) && tmp_file_path_json->valuestring) {
         *tmp_file_path = strdup(tmp_file_path_json->valuestring);
@@ -261,7 +272,7 @@ static gboolean load_payload(const char *payload, char **config_file_path,
         failed = TRUE;
     }
 
-    cJSON *dst_file_path_json =
+    dst_file_path_json =
         cJSON_GetObjectItemCaseSensitive(payload_json, "dstFilePath");
     if (cJSON_IsString(dst_file_path_json) && dst_file_path_json->valuestring) {
         *dst_file_path = strdup(dst_file_path_json->valuestring);
@@ -270,7 +281,7 @@ static gboolean load_payload(const char *payload, char **config_file_path,
         failed = TRUE;
     }
 
-    cJSON *monitor_name_json =
+    monitor_name_json =
         cJSON_GetObjectItemCaseSensitive(payload_json, "monitorName");
     if (cJSON_IsString(monitor_name_json) && monitor_name_json->valuestring) {
         *monitor_name = strdup(monitor_name_json->valuestring);
@@ -297,7 +308,6 @@ static gboolean load_payload(const char *payload, char **config_file_path,
 }
 
 extern int main(int argc, char **argv) {
-    (void)argc, (void)argv;
     char buffer[BUFFER_SIZE];
     ssize_t count;
 
@@ -306,7 +316,9 @@ extern int main(int argc, char **argv) {
     char *dst_wallpaper_path;
     char *monitor_name;
 
-    int status = 1;
+    int status;
+    (void)argc, (void)argv;
+    status = 1;
 
     count = read(STDIN_FILENO, buffer, sizeof(buffer) - 1);
 

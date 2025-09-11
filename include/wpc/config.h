@@ -12,18 +12,18 @@ typedef enum {
 } BgMode;
 
 typedef struct {
+    BgMode bg_mode;
     gchar *name;
     gchar *image_path;
     gchar *bg_fallback_color;
     gchar *valid_bg_fallback_color;
-    BgMode bg_mode;
 } ConfigMonitor;
 
 typedef struct {
     gushort number_of_monitors;
-    ConfigMonitor *monitors_with_backgrounds;
-    gchar *source_directory;
     gboolean valid_source_directory;
+    gchar *source_directory;
+    ConfigMonitor *monitors_with_backgrounds;
 } Config;
 
 extern void init_config_monitor(Config *config, const gchar *monitor_name,

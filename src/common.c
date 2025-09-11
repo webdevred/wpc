@@ -12,10 +12,11 @@
 #include "wpc/common.h"
 
 extern int create_parent_dirs(const char *file_path, mode_t mode) {
+    char *path_copy, *p;
     assert(file_path && *file_path);
-    char *path_copy = strdup(file_path);
+    path_copy = g_strdup(file_path);
     if (!path_copy) return -1;
-    for (char *p = strchr(path_copy + 1, '/'); p; p = strchr(p + 1, '/')) {
+    for (p = strchr(path_copy + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
         if (mkdir(path_copy, mode) == -1) {
             if (errno != EEXIST) {

@@ -22,7 +22,7 @@ char lightdm_helper_path[256];
 void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
                   LibFlagsDa *common_flags) {
     char *lib = nob_temp_sprintf("-I%s", HEADER_FOLDER);
-    nob_cmd_append(cmd, "-std=gnu11");
+    nob_cmd_append(cmd, "-std=c11");
     if (use_imagemagick7) nob_cmd_append(cmd, "-DWPC_IMAGEMAGICK_7=1");
     if (enable_lightdm_helper) {
         nob_cmd_append(
@@ -30,10 +30,16 @@ void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
             nob_temp_sprintf("-DWPC_HELPER_PATH=\"%s\"", lightdm_helper_path));
     }
 
-    nob_cc_flags(cmd);
-    if (enable_dev_tooling)
+    if (enable_dev_tooling) {
         nob_cmd_append(cmd, "-g", "-fsanitize=address",
                        "-fno-omit-frame-pointer");
+    }
+    nob_cmd_append(cmd, "-std=c11", "-Werror", "-Wpedantic",
+                   "-Wdeclaration-after-statement", "-Wmissing-prototypes",
+                   "-Wstrict-prototypes", "-Wmissing-variable-declarations",
+                   "-Wshadow", "-Wformat=2", "-Wundef", "-Wformat-truncation",
+                   "-Wconversion", "-Wuninitialized", "-Wnested-externs",
+                   "-Wunused-function");
 
     nob_cmd_append(cmd, lib);
     uint nmain_flags = main_flags->count;
@@ -162,12 +168,12 @@ Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,
             }
 
             if (enable_dev_tooling) {
+                char *compilation_json_file =
+                    nob_temp_sprintf("%s/%s.json", BUILD_FOLDER, object);
                 nob_cmd_append(cmd, "clang");
                 ext--;
                 *ext = '\0';
-                nob_cmd_append(
-                    cmd, "-MJ",
-                    nob_temp_sprintf("%s/%s.json", BUILD_FOLDER, object));
+                nob_cmd_append(cmd, "-MJ", compilation_json_file);
             } else {
                 nob_cc(cmd);
             }
@@ -191,7 +197,11 @@ Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,
 
 int build_target(Nob_Cmd *cmd, const char *target, Nob_File_Paths objects,
                  LibFlagsDa *main_ldflags, LibFlagsDa *common_ldflags) {
-    nob_cc(cmd);
+    if (enable_dev_tooling) {
+        nob_cmd_append(cmd, "clang");
+    } else {
+        nob_cc(cmd);
+    }
     const char *out_file = nob_temp_sprintf("%s/%s", BUILD_FOLDER, target);
     uint nobjects = objects.count;
     for (uint i = 0; i < nobjects; i++) {

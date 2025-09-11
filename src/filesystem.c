@@ -13,6 +13,8 @@ __attribute__((used)) static void _mark_magick_used(void) {
 }
 
 static bool check_image(const char *filename) {
+    bool valid;
+    const char *mime_type;
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
     if (!magic) {
         fprintf(stderr, "Failed to initialize libmagic\n");
@@ -21,8 +23,8 @@ static bool check_image(const char *filename) {
 
     magic_load(magic, NULL);
 
-    bool valid = TRUE;
-    const char *mime_type = magic_file(magic, filename);
+    valid = TRUE;
+    mime_type = magic_file(magic, filename);
     if (!mime_type || strncmp(mime_type, "image/", 6) != 0) {
         valid = FALSE;
         g_info("File %s has invalid MIME type %s", filename, mime_type);
@@ -34,6 +36,7 @@ static bool check_image(const char *filename) {
 }
 
 static bool set_width_and_height(Wallpaper *wallpaper) {
+    size_t width, height;
     MagickWand *wand = NewMagickWand();
 
     if (MagickReadImage(wand, wallpaper->path) == MagickFalse) {
@@ -44,8 +47,8 @@ static bool set_width_and_height(Wallpaper *wallpaper) {
         return FALSE;
     }
 
-    size_t width = MagickGetImageWidth(wand);
-    size_t height = MagickGetImageHeight(wand);
+    width = MagickGetImageWidth(wand);
+    height = MagickGetImageHeight(wand);
 
     wallpaper->width = width;
     wallpaper->height = height;
@@ -79,12 +82,12 @@ extern void free_wallpaper_queue(WallpaperQueue *queue) {
 
 gchar *next_wallpaper_in_queue(WallpaperQueue *queue) {
     WallpaperArray *array = queue->wallpapers;
-
+    gchar *path;
     if (array->amount_used == 0) {
         return NULL;
     }
 
-    gchar *path = array->data[queue->current_wallpaper].path;
+    path = array->data[queue->current_wallpaper].path;
 
     queue->current_wallpaper =
         (queue->current_wallpaper + 1) % array->amount_used;
@@ -93,14 +96,20 @@ gchar *next_wallpaper_in_queue(WallpaperQueue *queue) {
 }
 
 extern WallpaperArray *list_wallpapers(gchar *source_directory) {
+    Wallpaper *wallpaper_array, *wallpaper;
+    WallpaperArray *array_wrapper;
+    gushort amount_used, amount_allocated;
+    bool slash_needed;
+    struct dirent *file;
     DIR *dir = opendir(source_directory);
+    gulong src_dir_len, path_size;
     if (!dir) {
         closedir(dir);
         g_warning("dir %s does not exist", source_directory);
         return NULL;
     }
 
-    WallpaperArray *array_wrapper = malloc(sizeof(WallpaperArray));
+    array_wrapper = malloc(sizeof(WallpaperArray));
     if (!array_wrapper) {
         closedir(dir);
         return NULL;
@@ -112,15 +121,13 @@ extern WallpaperArray *list_wallpapers(gchar *source_directory) {
         return NULL;
     }
 
-    Wallpaper *wallpaper_array = (Wallpaper *)array_wrapper->data;
-    gushort amount_used = 0;
-    gushort amount_allocated = 8;
+    wallpaper_array = (Wallpaper *)array_wrapper->data;
+    amount_used = 0;
+    amount_allocated = 8;
 
-    gushort src_dir_len = strlen(source_directory);
-    bool slash_needed = source_directory[src_dir_len - 1] != '/';
+    src_dir_len = strlen(source_directory);
+    slash_needed = source_directory[src_dir_len - 1] != '/';
     src_dir_len += slash_needed ? 1 : 0;
-
-    struct dirent *file;
 
     while ((file = readdir(dir)) != NULL) {
         gchar *filename = file->d_name;
@@ -142,9 +149,9 @@ extern WallpaperArray *list_wallpapers(gchar *source_directory) {
             array_wrapper->data = wallpaper_array;
         }
 
-        Wallpaper *wallpaper = &wallpaper_array[amount_used];
+        wallpaper = &wallpaper_array[amount_used];
 
-        gushort path_size = src_dir_len + strlen(filename) + 1;
+        path_size = src_dir_len + strlen(filename) + 1;
         wallpaper->path = malloc(path_size);
         if (!wallpaper->path) {
             free(array_wrapper->data);

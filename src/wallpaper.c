@@ -16,19 +16,22 @@ __attribute__((used)) static void _mark_magick_used(void) {
     _wpc_magick_include_marker();
 }
 
-Atom wmDeleteWindow;
-XContext xid_context = 0;
-
 #ifdef WPC_IMAGEMAGICK_7
-const char *pixel_format = "BGRA";
+const static char *pixel_format = "BGRA";
 #else
-const char *pixel_format = "RGBA";
+const static char *pixel_format = "RGBA";
 #endif
 
 static void set_bg_for_monitor(const gchar *wallpaper_path,
                                gchar *conf_bg_fb_color, BgMode bg_mode,
                                Monitor *monitor, Pixmap pmap) {
-    MagickWand *wand = NewMagickWand();
+    unsigned char *pixels;
+    XImage *ximage;
+    GC gc;
+    XGCValues gcval;
+    MagickWand *wand;
+
+    wand = NewMagickWand();
 
     if (MagickReadImage(wand, wallpaper_path) == MagickFalse) {
         DestroyMagickWand(wand);
@@ -40,21 +43,20 @@ static void set_bg_for_monitor(const gchar *wallpaper_path,
         transform_wallpaper(&wand, monitor, bg_mode, conf_bg_fb_color);
     }
 
-    unsigned char *pixels =
-        (unsigned char *)malloc(monitor->width * monitor->height * 4);
+    pixels = (unsigned char *)malloc(monitor->width * monitor->height * 4);
 
     MagickExportImagePixels(wand, 0, 0, monitor->width, monitor->height,
                             pixel_format, CharPixel, pixels);
-    XImage *ximage = XCreateImage(querying_display, rendering_visual,
-                                  querying_depth, ZPixmap, 0, (char *)pixels,
-                                  monitor->width, monitor->height, 32, 0);
+    ximage = XCreateImage(querying_display, rendering_visual,
+                          (guint)querying_depth, ZPixmap, 0, (char *)pixels,
+                          (guint)monitor->width, (guint)monitor->height, 32, 0);
 
-    XGCValues gcval;
     gcval.foreground = None;
-    GC gc = XCreateGC(querying_display, querying_root, GCForeground, &gcval);
+    gc = XCreateGC(querying_display, querying_root, GCForeground, &gcval);
 
-    XPutImage(querying_display, pmap, gc, ximage, 0, 0, monitor->left_x,
-              monitor->top_y, monitor->width, monitor->height);
+    XPutImage(querying_display, pmap, gc, ximage, 0, 0, (gint)monitor->left_x,
+              (gint)monitor->top_y, (guint)monitor->width,
+              (guint)monitor->height);
 
     ximage->data = NULL;
     XDestroyImage(ximage);
@@ -77,24 +79,29 @@ static Atom get_atom(Display *display, char *atom_name, Bool only_if_exists) {
 
 extern void set_wallpapers(Config *config, WallpaperQueue *queue,
                            MonitorArray *mon_arr_wrapper) {
-    GC gc;
-
+    Monitor *monitors;
+    ConfigMonitor *monitor_bgs;
+    gushort m;
     Atom prop_root, prop_esetroot;
     Pixmap pmap_d1, pmap_d2;
-
-    pmap_d1 =
-        XCreatePixmap(querying_display, querying_root, rendering_screen->width,
-                      rendering_screen->height, querying_depth);
-    Monitor *monitors = (Monitor *)mon_arr_wrapper->data;
-    gushort m;
-    ConfigMonitor *monitor_bgs = config->monitors_with_backgrounds;
-    gchar *wallpaper_path = NULL;
-    gchar *bg_fallback_color = NULL;
+    GC gc;
     BgMode bg_mode;
-
     gushort w;
     bool found;
     Monitor *monitor;
+    XGCValues gcvalues;
+
+    gchar *wallpaper_path, *bg_fallback_color;
+
+    pmap_d1 = XCreatePixmap(
+        querying_display, querying_root, (guint)rendering_screen->width,
+        (guint)rendering_screen->height, (guint)querying_depth);
+    monitors = (Monitor *)mon_arr_wrapper->data;
+    monitor_bgs = config->monitors_with_backgrounds;
+    wallpaper_path = NULL;
+    bg_fallback_color = NULL;
+
+    bg_mode = BG_MODE_FILL;
 
     for (m = 0; m < mon_arr_wrapper->amount_used; m++) {
         monitor = &monitors[m];
@@ -131,16 +138,17 @@ extern void set_wallpapers(Config *config, WallpaperQueue *queue,
 
     /* create new display, copy pixmap to new display */
     XSync(querying_display, False);
-    pmap_d2 = XCreatePixmap(rendering_display, rendering_root,
-                            rendering_screen->width, rendering_screen->height,
-                            rendering_depth);
-    XGCValues gcvalues = {
+    pmap_d2 = XCreatePixmap(
+        rendering_display, rendering_root, (guint)rendering_screen->width,
+        (guint)rendering_screen->height, (guint)rendering_depth);
+    gcvalues = (XGCValues){
         .fill_style = FillTiled,
         .tile = pmap_d1,
     };
     gc = XCreateGC(rendering_display, pmap_d2, GCFillStyle | GCTile, &gcvalues);
     XFillRectangle(rendering_display, pmap_d2, gc, 0, 0,
-                   rendering_screen->width, rendering_screen->height);
+                   (guint)rendering_screen->width,
+                   (guint)rendering_screen->height);
 
     prop_root = get_atom(rendering_display, "_XROOTPMAP_ID", False);
     prop_esetroot = get_atom(rendering_display, "ESETROOT_PMAP_ID", False);

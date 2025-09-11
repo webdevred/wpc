@@ -7,8 +7,19 @@ WPC_IMAGEMAGICK_7 ?= 1
 WPC_INSTALL_DIR := /usr/local/bin
 WPC_HELPER_INSTALL_DIR := /usr/local/libexec/wpc
 WPC_HELPER_PATH := $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
-
-COMMON_CFLAGS := -Wall -Wextra -std=gnu11 -g3  $(shell pkg-config --cflags glib-2.0)
+COMMON_CFLAGS := -Wall -Wextra -std=c11 -g3 \
+                 -Werror \
+                 -Wdeclaration-after-statement \
+                 -Wmissing-prototypes \
+                 -Wstrict-prototypes \
+                 -Wmissing-variable-declarations \
+                 -Wshadow \
+                 -Wdouble-promotion \
+                 -Wformat=2 \
+                 -Wundef \
+                 -Wformat-truncation \
+                 -Wconversion \
+	         $(shell pkg-config --cflags glib-2.0)
 COMMON_LDFLAGS := $(shell pkg-config --libs libcjson glib-2.0)
 
 WPC_CFLAGS := $(COMMON_CFLAGS) $(shell pkg-config --cflags gtk4 MagickWand libcjson) -DWPC_HELPER_PATH="\"$(WPC_HELPER_PATH)\""

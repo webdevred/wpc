@@ -29,17 +29,21 @@ __attribute__((used)) static void _mark_magick_used(void) {
  * Notes:
  *   - This function creates a new MagickWand and frees the old one.
  */
+
 extern void transform_wallpaper(MagickWand **wand_ptr, Monitor *monitor,
                                 BgMode bg_mode,
                                 const gchar *bg_fallback_color) {
-    MagickWand *wand = *wand_ptr;
+    RenderingRegion rr;
+    MagickWand *wand, *scaled_wand;
+    PixelWand *color;
+    wand = *wand_ptr;
 
-    RenderingRegion rr = create_rendering_region(wand, monitor, bg_mode);
+    rr = create_rendering_region(wand, monitor, bg_mode);
 
-    PixelWand *color = NewPixelWand();
+    color = NewPixelWand();
     PixelSetColor(color, bg_fallback_color);
 
-    MagickWand *scaled_wand = NewMagickWand();
+    scaled_wand = NewMagickWand();
     MagickNewImage(scaled_wand, monitor->width, monitor->height, color);
 #ifdef WPC_IMAGEMAGICK_7
     MagickResizeImage(wand, rr.width, rr.height, LanczosFilter);
@@ -81,30 +85,33 @@ extern void transform_wallpaper(MagickWand **wand_ptr, Monitor *monitor,
  *   - The function assumes the original image is smaller than the monitor.
  */
 extern bool transform_wallpaper_tiled(MagickWand **wand_ptr, Monitor *monitor) {
-    MagickWand *wand = *wand_ptr;
-
+    glong amount_x, amount_y;
+    gulong output_width, output_height, img_w, img_h;
+    MagickWand *wand, *tiled_wand;
+    PixelWand *color;
     guint i, j;
-    guint img_w = MagickGetImageWidth(wand);
-    guint img_h = MagickGetImageHeight(wand);
+    wand = *wand_ptr;
+    img_w = MagickGetImageWidth(wand);
+    img_h = MagickGetImageHeight(wand);
 
     if (img_w > monitor->width || img_h > monitor->height) return FALSE;
 
-    guint amount_x = (monitor->width + img_w - 1) / img_w;
-    guint amount_y = (monitor->height + img_h - 1) / img_h;
+    amount_x = (monitor->width + (glong)img_w - 1) / (glong)img_w;
+    amount_y = (monitor->height + (glong)img_h - 1) / (glong)img_h;
 
-    guint output_width = amount_x * img_w;
-    guint output_height = amount_y * img_h;
+    output_width = (gulong)amount_x * img_w;
+    output_height = (gulong)amount_y * img_h;
 
-    PixelWand *color = NewPixelWand();
+    color = NewPixelWand();
     PixelSetColor(color, "none");
 
-    MagickWand *tiled_wand = NewMagickWand();
+    tiled_wand = NewMagickWand();
     MagickNewImage(tiled_wand, output_width, output_height, color);
     for (i = 0; i < amount_x; i++) {
         for (j = 0; j < amount_y; j++) {
 #ifdef WPC_IMAGEMAGICK_7
             MagickCompositeImage(tiled_wand, wand, OverCompositeOp, MagickTrue,
-                                 img_w * i, img_h * j);
+                                 (glong)img_w * i, (glong)img_h * j);
 #else
             MagickCompositeImage(tiled_wand, wand, OverCompositeOp, img_w * i,
                                  img_h * j);

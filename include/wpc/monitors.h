@@ -5,8 +5,8 @@
 #include <wpc/filesystem.h>
 
 typedef struct {
-    gushort width, height;
-    gshort left_x, top_y;
+    guint width, height;
+    gint left_x, top_y;
     gushort config_id;
     gboolean belongs_to_config;
     gboolean primary;

@@ -6,8 +6,6 @@
 #define MAX_LINE_LENGTH 1024
 #define CONFIG_FILE "/etc/lightdm/lightdm-gtk-greeter.conf"
 
-extern int lightdm_parse_config(char ***config_ptr, int *lines_ptr);
-
 #ifdef DM_CONFIG_PAYLOAD
 typedef struct {
     char *config_file;

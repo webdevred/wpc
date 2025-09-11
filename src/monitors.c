@@ -17,7 +17,7 @@ int rendering_depth;
 Colormap rendering_colormap;
 Screen *rendering_screen;
 
-static XRRScreenResources *get_screen_resources() {
+static XRRScreenResources *get_screen_resources(void) {
     XRRScreenResources *screen_resources =
         XRRGetScreenResources(querying_display, querying_root);
     if (screen_resources == NULL) {
@@ -28,7 +28,7 @@ static XRRScreenResources *get_screen_resources() {
     return screen_resources;
 }
 
-static Display *open_display() {
+static Display *open_display(void) {
     Display *display = XOpenDisplay(NULL);
     if (display == NULL) {
         g_error("Unable to open X display\n");
@@ -69,16 +69,19 @@ extern void free_monitors(MonitorArray *arr) {
 }
 
 extern MonitorArray *list_monitors(const bool virtual_monitors) {
+    Monitor *monitors;
+    gushort amount_used, amount_allocated;
     MonitorArray *array_wrapper = malloc(sizeof(MonitorArray));
     if (!array_wrapper) {
         return NULL;
     }
 
     if (virtual_monitors) {
-        int amount_used = 0;
         XRRMonitorInfo *x_monitors;
-        x_monitors =
-            XRRGetMonitors(querying_display, querying_root, 0, &amount_used);
+        amount_used = 0;
+
+        x_monitors = XRRGetMonitors(querying_display, querying_root, 0,
+                                    (int *)(&amount_used));
 
         array_wrapper->data = malloc(amount_used * sizeof(Monitor));
         if (!array_wrapper->data) {
@@ -86,13 +89,13 @@ extern MonitorArray *list_monitors(const bool virtual_monitors) {
             return NULL;
         }
 
-        Monitor *monitors = (Monitor *)array_wrapper->data;
+        monitors = (Monitor *)array_wrapper->data;
 
         for (int i = 0; i < amount_used; i++) {
             monitors[i].name =
                 XGetAtomName(querying_display, x_monitors[i].name);
-            monitors[i].width = x_monitors[i].width;
-            monitors[i].height = x_monitors[i].height;
+            monitors[i].width = (guint)x_monitors[i].width;
+            monitors[i].height = (guint)x_monitors[i].height;
             monitors[i].left_x = x_monitors[i].x;
             monitors[i].top_y = x_monitors[i].y;
             monitors[i].primary = x_monitors[i].primary;
@@ -107,16 +110,16 @@ extern MonitorArray *list_monitors(const bool virtual_monitors) {
         array_wrapper->amount_allocated = (gushort)amount_used;
         array_wrapper->amount_used = (gushort)amount_used;
     } else {
-        array_wrapper->data = NULL;
-        Monitor *monitors = (Monitor *)array_wrapper->data;
-        gushort amount_used = 0;
-        gushort amount_allocated = 0;
-        XRRScreenResources *screen_resources = get_screen_resources();
-
+        XRRScreenResources *screen_resources;
         XRROutputInfo *outputInfo;
         XRRCrtcInfo *crtcInfo;
-
         RROutput primaryOutput;
+
+        array_wrapper->data = NULL;
+        monitors = (Monitor *)array_wrapper->data;
+        amount_used = 0;
+        amount_allocated = 0;
+        screen_resources = get_screen_resources();
 
         primaryOutput = XRRGetOutputPrimary(querying_display, querying_root);
 
@@ -135,9 +138,9 @@ extern MonitorArray *list_monitors(const bool virtual_monitors) {
                             monitors, amount_allocated * sizeof(Monitor));
                         monitors = (Monitor *)array_wrapper->data;
                     }
-                    monitors[i].name = strdup(outputInfo->name);
-                    monitors[i].width = crtcInfo->width;
-                    monitors[i].height = crtcInfo->height;
+                    monitors[i].name = g_strdup(outputInfo->name);
+                    monitors[i].width = (guint)crtcInfo->width;
+                    monitors[i].height = (guint)crtcInfo->height;
                     monitors[i].left_x = crtcInfo->x;
                     monitors[i].top_y = crtcInfo->y;
                     monitors[i].primary =

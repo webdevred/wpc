@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <utime.h>
 #define NOB_WARN_DEPRECATED
 #define NOB_IMPLEMENTATION
 
@@ -299,10 +300,26 @@ void check_dev_tooling_enabled(void) {
             enable_dev_tooling ? "dev" : "prod");
 }
 
-int main(int argc, char **argv) {
-    NOB_GO_REBUILD_URSELF(argc, argv);
+bool nob_touch_file(const char *path) {
+    nob_log(NOB_INFO, "touching %s", path);
+    if (utime(path, NULL) == -1) {
+        if (errno != ENOENT) {
+            nob_log(NOB_ERROR, "Could not touch file %s: %s", path,
+                    strerror(errno));
+            return false;
+        }
+    }
+    return true;
+}
 
+int main(int argc, char **argv) {
+#if defined(__clang__)
+    if (!nob_file_exists("build/nob.o.json")) {
+        nob_touch_file("nob.c");
+    }
+#endif
     if (!nob_mkdir_if_not_exists(BUILD_FOLDER)) return 1;
+    NOB_GO_REBUILD_URSELF(argc, argv);
 
     Nob_Cmd cmd = {0};
     check_dev_tooling_enabled();

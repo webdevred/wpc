@@ -2,6 +2,14 @@
 #define NOB_WARN_DEPRECATED
 #define NOB_IMPLEMENTATION
 
+#if defined(__clang__)
+#define NOB_REBUILD_URSELF(binary_path, source_path)                           \
+    "clang", "-MJ", "build/nob.o.json", "-o", binary_path, source_path
+#else
+#define NOB_REBUILD_URSELF(binary_path, source_path)                           \
+    "cc", "-o", binary_path, source_path
+#endif
+
 #include "nob.h"
 // Some folder paths that we use throughout the build process.
 #define BUILD_FOLDER "build"
@@ -116,16 +124,27 @@ void create_compilation_database(Nob_File_Paths files) {
     FILE *comp_db = fopen("compile_commands.json", "w");
     uint i;
     Nob_String_Builder builder = {0};
-    char *content;
+    char *json_path;
+    bool nob_json_read_success = false;
     fwrite("[\n", sizeof(char), 2, comp_db);
     for (i = 0; i < files.count; i++) {
         builder.count = 0;
-        nob_read_entire_file(nob_temp_sprintf("%s.json", files.items[i]),
-                             &builder);
-        nob_log(NOB_INFO, "adding %s to compilation database", files.items[i]);
+        json_path = nob_temp_sprintf("%s.json", files.items[i]);
+        nob_read_entire_file(json_path, &builder);
+        nob_log(NOB_INFO, "adding %s to compilation database", json_path);
+        fwrite("  ", sizeof(char), 2, comp_db);
+        fwrite(builder.items, sizeof(char), builder.count, comp_db);
+        free(json_path);
+    }
+
+    builder.count = 0;
+    nob_json_read_success = nob_read_entire_file("build/nob.o.json", &builder);
+    if (nob_json_read_success) {
+        nob_log(NOB_INFO, "adding nob.o.json to compilation database");
         fwrite("  ", sizeof(char), 2, comp_db);
         fwrite(builder.items, sizeof(char), builder.count, comp_db);
     }
+
     fwrite("]\n", sizeof(char), 2, comp_db);
 }
 

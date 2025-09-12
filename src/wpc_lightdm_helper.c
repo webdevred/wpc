@@ -166,7 +166,7 @@ static int set_background(const char *scaled_wallpaper_path,
                           const char *dst_wallpaper_path,
                           const char *monitor_name) {
     gboolean found_monitor, updating_monitor;
-    gulong lines,  bg_key_len;
+    gulong lines, bg_key_len;
     char **config, *storage_directory;
     DIR *dir;
     bg_key_len = strlen(bg_key);

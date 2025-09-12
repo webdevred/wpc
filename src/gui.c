@@ -1,9 +1,10 @@
 // Copyright 2025 webdevred
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Weverything"
+#include "wpc/macros.h"
+
+BEGIN_IGNORE_WARNINGS
 #include <gtk/gtk.h>
-#pragma clang diagnostic pop
+END_IGNORE_WARNINGS
 
 #include <glib.h>
 #include <stdio.h>

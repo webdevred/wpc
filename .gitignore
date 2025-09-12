@@ -4,6 +4,7 @@
 /wpc
 /.cache
 /.ccls-cache
+/.clangd
 /compile_commands.json
 **/*~
 **/#*#

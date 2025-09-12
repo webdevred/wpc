@@ -1,9 +1,10 @@
 #pragma once
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Weverything"
+#include "wpc/macros.h"
+
+BEGIN_IGNORE_WARNINGS
 #include <gtk/gtk.h>
-#pragma clang diagnostic pop
+END_IGNORE_WARNINGS
 
 typedef struct {
     size_t width, height;

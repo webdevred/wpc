@@ -48,7 +48,8 @@ void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
                    "-Wstrict-prototypes", "-Wmissing-variable-declarations",
                    "-Wshadow", "-Wformat=2", "-Wundef", "-Wformat-truncation",
                    "-Wconversion", "-Wuninitialized", "-Wnested-externs",
-                   "-Wunused-function");
+                   "-Wunused-function", "-Wunused-variable",
+                   "-Wdouble-promotion");
 
     nob_cmd_append(cmd, lib);
     uint nmain_flags = main_flags->count;
@@ -145,7 +146,7 @@ void create_compilation_database(Nob_File_Paths files) {
 
     builder.count = 0;
     nob_json_read_success = nob_read_entire_file("build/nob.o.json", &builder);
-    if (nob_json_read_success) {
+    if (nob_json_read_success && i > 0) {
         nob_log(NOB_INFO, "adding nob.o.json to compilation database");
         write_json_from_builder(&builder, comp_db, false);
     }
@@ -317,8 +318,9 @@ bool nob_touch_file(const char *path) {
 }
 
 int main(int argc, char **argv) {
+    check_dev_tooling_enabled();
 #if defined(__clang__)
-    if (!nob_file_exists("build/nob.o.json")) {
+    if (!nob_file_exists("build/nob.o.json") && enable_dev_tooling) {
         nob_touch_file("nob.c");
     }
 #endif
@@ -326,7 +328,6 @@ int main(int argc, char **argv) {
     NOB_GO_REBUILD_URSELF(argc, argv);
 
     Nob_Cmd cmd = {0};
-    check_dev_tooling_enabled();
     should_use_imagemagick7(&cmd);
     setup_lightdm_helper_flags();
 
@@ -355,9 +356,11 @@ int main(int argc, char **argv) {
         build_target(&cmd, "wpc_lightdm_helper", helper_objects,
                      &wpc_helper_ldflags, &wpc_common_ldflags);
     }
+#if defined(__clang__)
     if (enable_dev_tooling) {
         create_compilation_database(object_names);
     }
+#endif
     nob_da_free(wpc_cflags);
     nob_da_free(wpc_ldflags);
     nob_da_free(wpc_common_cflags);

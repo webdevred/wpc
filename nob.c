@@ -121,9 +121,11 @@ LibFlagsDa list_lib_ldflags(Nob_Cmd *cmd, char *lib_names[]) {
     return list_lib_flags(cmd, lib_names, false);
 }
 
-void write_json_from_builder(Nob_String_Builder *builder, FILE *comp_db) {
-    fwrite("  ", sizeof(char), 2, comp_db);
-    fwrite(builder->items, sizeof(char), builder->count, comp_db);
+void write_json_from_builder(Nob_String_Builder *builder, FILE *comp_db,
+                             bool first) {
+    if (!first) fwrite(",", sizeof(char), 1, comp_db);
+    fwrite("\n  ", sizeof(char), 3, comp_db);
+    fwrite(builder->items, sizeof(char), builder->count - 2, comp_db);
 }
 
 void create_compilation_database(Nob_File_Paths files) {
@@ -132,23 +134,23 @@ void create_compilation_database(Nob_File_Paths files) {
     Nob_String_Builder builder = {0};
     char *json_path;
     bool nob_json_read_success = false;
-    fwrite("[\n", sizeof(char), 2, comp_db);
+    fwrite("[", sizeof(char), 1, comp_db);
     for (i = 0; i < files.count; i++) {
         builder.count = 0;
         json_path = nob_temp_sprintf("%s.json", files.items[i]);
         nob_read_entire_file(json_path, &builder);
         nob_log(NOB_INFO, "adding %s to compilation database", json_path);
-        write_json_from_builder(&builder, comp_db);
+        write_json_from_builder(&builder, comp_db, i == 0);
     }
 
     builder.count = 0;
     nob_json_read_success = nob_read_entire_file("build/nob.o.json", &builder);
     if (nob_json_read_success) {
         nob_log(NOB_INFO, "adding nob.o.json to compilation database");
-        write_json_from_builder(&builder, comp_db);
+        write_json_from_builder(&builder, comp_db, false);
     }
 
-    fwrite("]\n", sizeof(char), 2, comp_db);
+    fwrite("\n]\n", sizeof(char), 3, comp_db);
 }
 
 Nob_File_Paths build_source_files(Nob_Cmd *cmd, const char *target,

@@ -282,6 +282,8 @@ void setup_lightdm_helper_flags(void) {
         strcpy(lightdm_helper_path, "/usr/local/libexec/wpc/lightdm_helper");
     }
 
+    // set enable_lightdm_helper to true if enable_helper_var is not equal
+    // to 0. if enable_helper_var is NULL, default to true
     if (enable_helper_var != NULL) {
         enable_lightdm_helper = strcmp(enable_helper_var, "0") != 0;
     }

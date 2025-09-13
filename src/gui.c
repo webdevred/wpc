@@ -17,7 +17,7 @@ END_IGNORE_WARNINGS
 #include "wpc/wallpaper.h"
 
 #ifdef WPC_ENABLE_HELPER
-#include "wpc/lightdm.h"
+    #include "wpc/lightdm.h"
 #endif
 
 static const gchar css[] =

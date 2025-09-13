@@ -5,11 +5,11 @@
 #define NOB_EXPERIMENTAL_DELETE_OLD
 
 #if defined(__clang__)
-#define NOB_REBUILD_URSELF(binary_path, source_path)                           \
-    "clang", "-MJ", "build/nob.o.json", "-o", binary_path, source_path
+    #define NOB_REBUILD_URSELF(binary_path, source_path)                       \
+        "clang", "-MJ", "build/nob.o.json", "-o", binary_path, source_path
 #else
-#define NOB_REBUILD_URSELF(binary_path, source_path)                           \
-    "cc", "-o", binary_path, source_path
+    #define NOB_REBUILD_URSELF(binary_path, source_path)                       \
+        "cc", "-o", binary_path, source_path
 #endif
 
 #include "nob.h"

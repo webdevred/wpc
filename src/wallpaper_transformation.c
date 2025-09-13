@@ -113,8 +113,8 @@ extern bool transform_wallpaper_tiled(MagickWand **wand_ptr, Monitor *monitor) {
             MagickCompositeImage(tiled_wand, wand, OverCompositeOp, MagickTrue,
                                  (glong)img_w * i, (glong)img_h * j);
 #else
-            MagickCompositeImage(tiled_wand, wand, OverCompositeOp, img_w * i,
-                                 img_h * j);
+            MagickCompositeImage(tiled_wand, wand, OverCompositeOp,
+                                 (glong)img_w * i, (glong)img_h * j);
 #endif
         }
     }

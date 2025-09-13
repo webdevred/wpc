@@ -2,6 +2,7 @@
 #include <utime.h>
 #define NOB_WARN_DEPRECATED
 #define NOB_IMPLEMENTATION
+#define NOB_EXPERIMENTAL_DELETE_OLD
 
 #if defined(__clang__)
 #define NOB_REBUILD_URSELF(binary_path, source_path)                           \
@@ -45,10 +46,9 @@ void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
     }
     nob_cmd_append(cmd, "-std=c11", "-Werror", "-Wpedantic",
                    "-Wdeclaration-after-statement", "-Wmissing-prototypes",
-                   "-Wstrict-prototypes", "-Wmissing-variable-declarations",
-                   "-Wshadow", "-Wformat=2", "-Wundef", "-Wformat-truncation",
-                   "-Wconversion", "-Wuninitialized", "-Wnested-externs",
-                   "-Wunused-function", "-Wunused-variable",
+                   "-Wstrict-prototypes", "-Wshadow", "-Wformat=2", "-Wundef",
+                   "-Wformat-truncation", "-Wconversion", "-Wuninitialized",
+                   "-Wnested-externs", "-Wunused-function", "-Wunused-variable",
                    "-Wdouble-promotion");
 
     nob_cmd_append(cmd, lib);

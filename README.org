@@ -72,7 +72,7 @@ If you do not create a config file then source directory will be set to your pic
 
 * System Requirements
 
-- Requirements:
+Requirements:
   - libxrandr-dev
   - libx11-dev
   - libgtk4-dev

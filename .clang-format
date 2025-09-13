@@ -15,3 +15,4 @@ ColumnLimit: 80
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AlignAfterOpenBracket: Align
 SpacesBeforeTrailingComments: 1
+IndentPPDirectives: BeforeHash

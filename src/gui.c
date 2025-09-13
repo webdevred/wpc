@@ -53,8 +53,8 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
     Wallpaper *wallpaper;
     GtkWidget *bg_mode_dropdown;
     guint selected_index;
-    GtkButton *button_menu_choice;
-    AppTab *menu_choice;
+    Config *config;
+    char *monitor_name, *wallpaper_path;
     widget_block_handler(GTK_WIDGET(flowbox));
     app = GTK_APPLICATION(user_data);
     monitor = g_object_get_data(G_OBJECT(app), "selected_monitor");
@@ -76,42 +76,48 @@ static void image_selected(GtkFlowBox *flowbox, gpointer user_data) {
         gtk_drop_down_get_selected(GTK_DROP_DOWN(bg_mode_dropdown));
 
 #ifdef WPC_ENABLE_HELPER
-    button_menu_choice = g_object_get_data(G_OBJECT(app), "menu_choice");
+    {
+        GtkButton *button_menu_choice;
+        AppTab *menu_choice;
+        button_menu_choice = g_object_get_data(G_OBJECT(app), "menu_choice");
 
-    menu_choice = g_object_get_data(G_OBJECT(button_menu_choice), "name");
+        menu_choice = g_object_get_data(G_OBJECT(button_menu_choice), "name");
 
-    if (*menu_choice == DM_BACKGROUND) {
-        lightdm_set_background(wallpaper, monitor, selected_index);
-    } else {
-#endif
-        Config *config = g_object_get_data(G_OBJECT(app), "configuration");
-        char *monitor_name = monitor->name;
-        char *wallpaper_path = wallpaper->path;
-        if (!config || !monitor_name || !wallpaper_path) {
-            fprintf(stderr, "Error: Null input detected.\n");
-            return;
-        }
-
-        if (monitor->belongs_to_config) {
-            ConfigMonitor *config_monitor =
-                &config->monitors_with_backgrounds[monitor->config_id];
-            config_monitor->image_path = g_strdup(wallpaper_path);
-            monitor->wallpaper = wallpaper;
+        if (*menu_choice == DM_BACKGROUND) {
+            lightdm_set_background(wallpaper, monitor, selected_index);
         } else {
-            gushort number_of_monitors = config->number_of_monitors;
+#endif
+            config = g_object_get_data(G_OBJECT(app), "configuration");
+            monitor_name = monitor->name;
+            wallpaper_path = wallpaper->path;
+            if (!config || !monitor_name || !wallpaper_path) {
+                fprintf(stderr, "Error: Null input detected.\n");
+                return;
+            }
 
-            init_config_monitor(config, monitor_name, wallpaper_path,
-                                selected_index);
+            if (monitor->belongs_to_config) {
+                ConfigMonitor *config_monitor;
+                config_monitor =
+                    &config->monitors_with_backgrounds[monitor->config_id];
+                config_monitor->image_path = g_strdup(wallpaper_path);
+                monitor->wallpaper = wallpaper;
+            } else {
+                gushort number_of_monitors;
+                number_of_monitors = config->number_of_monitors;
 
-            monitor->belongs_to_config = TRUE;
-            monitor->config_id = number_of_monitors;
-            monitor->wallpaper = wallpaper;
-            config->number_of_monitors++;
-        }
-        dump_config(config);
-        monitors = g_object_get_data(G_OBJECT(app), "monitors");
-        set_wallpapers(config, NULL, monitors);
+                init_config_monitor(config, monitor_name, wallpaper_path,
+                                    selected_index);
+
+                monitor->belongs_to_config = TRUE;
+                monitor->config_id = number_of_monitors;
+                monitor->wallpaper = wallpaper;
+                config->number_of_monitors++;
+            }
+            dump_config(config);
+            monitors = g_object_get_data(G_OBJECT(app), "monitors");
+            set_wallpapers(config, NULL, monitors);
 #ifdef WPC_ENABLE_HELPER
+        }
     }
 #endif
     widget_unblock_handler(GTK_WIDGET(flowbox));

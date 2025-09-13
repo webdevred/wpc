@@ -75,9 +75,11 @@ If you do not create a config file then source directory will be set to your pic
 Requirements:
   - libxrandr-dev
   - libx11-dev
-  - libgtk4-dev
+  - libgtk-4-dev
+  - libmagic-dev
   - libcjson-dev
-  - libmagickwand
+  - libmagickwand-dev
+  - imagemagick
 
 Install the requirements like this:
 

@@ -81,9 +81,9 @@ $(BUILD_DIR) $(BC_DIR) $(WPC_INSTALL_DIR) $(WPC_HELPER_INSTALL_DIR):
 	mkdir -p $@
 
 install: all | $(WPC_INSTALL_DIR) $(WPC_HELPER_INSTALL_DIR)
-	install -m 0111 wpc $(WPC_INSTALL_DIR)/
+	install -m 0111 build/wpc $(WPC_INSTALL_DIR)/
 ifeq ($(WPC_HELPER), 1)
-	install -o root -g root -m 4711 wpc_lightdm_helper $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
+	install -o root -g root -m 4711 build/wpc_lightdm_helper $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
 endif
 
 iwyu:

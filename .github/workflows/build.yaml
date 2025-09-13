@@ -31,4 +31,9 @@ jobs:
           sudo apt-get -o Dir::Cache::Archives="$HOME/apt-cache" install -y clang $(cat apt-deps.txt)
           sudo rm -rf $HOME/apt-cache/partial $HOME/apt-cache/lock
       - run: clang nob.c -o nob
-      - run: ./nob
+      - name: Build with default configuration
+        run: ./nob
+      - name: Build without LightDM helper
+        run: ./nob
+        env:
+          WPC_HELPER: 0

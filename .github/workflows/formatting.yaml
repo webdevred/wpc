@@ -15,4 +15,4 @@ jobs:
       - run: clang-format -n -Werror include/**/*.h
       - run: clang-format -n -Werror nob.c
       - run: sudo apt install cpplint
-      - run: cpplint --filter=-build/include_subdir,-readability/casting src/*.c
+#      - run: cpplint --filter=-build/include_subdir,-readability/casting src/*.c

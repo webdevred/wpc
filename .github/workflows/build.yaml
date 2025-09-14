@@ -15,9 +15,9 @@ jobs:
         run: |
           awk '
           /Requirements:/ { in_section=1; next }
-          in_section && /^  - / { print substr($0, 5); last_dep=NR }
+          in_section && /^- / { print substr($0, 3); last_dep=NR }
           NR > last_dep && in_section { exit }
-          ' README.org > apt-deps.txt
+          ' README.md > apt-deps.txt
           cat apt-deps.txt
       - name: Cache apt packages
         uses: actions/cache@v3

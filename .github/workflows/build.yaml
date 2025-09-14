@@ -1,0 +1,43 @@
+name: Building
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Find dependency list
+        run: |
+          awk '
+          /Requirements:/ { in_section=1; next }
+          in_section && /^- / { print substr($0, 3); last_dep=NR }
+          NR > last_dep && in_section { exit }
+          ' README.md > apt-deps.txt
+          cat apt-deps.txt
+      - name: Cache apt packages
+        uses: actions/cache@v3
+        with:
+          path: ~/apt-cache
+          key: ${{ runner.os }}-apt-${{ hashFiles('apt-deps.txt') }}
+      - name: Install dependencies with cache
+        run: |
+          mkdir -p $HOME/apt-cache
+          sudo apt-get -o Dir::Cache::Archives="$HOME/apt-cache" update
+          sudo apt-get -o Dir::Cache::Archives="$HOME/apt-cache" install -y clang $(cat apt-deps.txt)
+          sudo rm -rf $HOME/apt-cache/partial $HOME/apt-cache/lock
+      - run: clang nob.c -o nob
+      - name: Build with default configuration
+        run: ./nob
+      - name: Build without LightDM helper
+        run: ./nob
+        env:
+          WPC_HELPER: 0
+      - name: Build using Clang instead of GCC
+        run: |
+          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
+          ./nob

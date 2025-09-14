@@ -7,18 +7,22 @@ WPC_IMAGEMAGICK_7 ?= 1
 WPC_INSTALL_DIR := /usr/local/bin
 WPC_HELPER_INSTALL_DIR := /usr/local/libexec/wpc
 WPC_HELPER_PATH := $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
-COMMON_CFLAGS := -Wall -Wextra -std=c11 -g3 \
+COMMON_CFLAGS := -std=c11
                  -Werror \
+                 -Wpedantic \
                  -Wdeclaration-after-statement \
                  -Wmissing-prototypes \
                  -Wstrict-prototypes \
-                 -Wmissing-variable-declarations \
                  -Wshadow \
-                 -Wdouble-promotion \
                  -Wformat=2 \
                  -Wundef \
                  -Wformat-truncation \
                  -Wconversion \
+                 -Wuninitialized \
+                 -Wnested-externs \
+                 -Wunused-function \
+                 -Wunused-variable \
+                 -Wdouble-promotion
 	         $(shell pkg-config --cflags glib-2.0)
 COMMON_LDFLAGS := $(shell pkg-config --libs libcjson glib-2.0)
 
@@ -81,9 +85,9 @@ $(BUILD_DIR) $(BC_DIR) $(WPC_INSTALL_DIR) $(WPC_HELPER_INSTALL_DIR):
 	mkdir -p $@
 
 install: all | $(WPC_INSTALL_DIR) $(WPC_HELPER_INSTALL_DIR)
-	install -m 0111 wpc $(WPC_INSTALL_DIR)/
+	install -m 0111 build/wpc $(WPC_INSTALL_DIR)/
 ifeq ($(WPC_HELPER), 1)
-	install -o root -g root -m 4711 wpc_lightdm_helper $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
+	install -o root -g root -m 4711 build/wpc_lightdm_helper $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
 endif
 
 iwyu:

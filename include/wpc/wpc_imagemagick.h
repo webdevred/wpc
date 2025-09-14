@@ -4,9 +4,9 @@
 
 BEGIN_IGNORE_WARNINGS
 #ifdef WPC_IMAGEMAGICK_7
-#include <MagickWand/MagickWand.h>
+    #include <MagickWand/MagickWand.h>
 #else
-#include <wand/MagickWand.h>
+    #include <wand/MagickWand.h>
 #endif
 END_IGNORE_WARNINGS
 

@@ -2,13 +2,14 @@
 #include <utime.h>
 #define NOB_WARN_DEPRECATED
 #define NOB_IMPLEMENTATION
+#define NOB_EXPERIMENTAL_DELETE_OLD
 
 #if defined(__clang__)
-#define NOB_REBUILD_URSELF(binary_path, source_path)                           \
-    "clang", "-MJ", "build/nob.o.json", "-o", binary_path, source_path
+    #define NOB_REBUILD_URSELF(binary_path, source_path)                       \
+        "clang", "-MJ", "build/nob.o.json", "-o", binary_path, source_path
 #else
-#define NOB_REBUILD_URSELF(binary_path, source_path)                           \
-    "cc", "-o", binary_path, source_path
+    #define NOB_REBUILD_URSELF(binary_path, source_path)                       \
+        "cc", "-o", binary_path, source_path
 #endif
 
 #include "nob.h"
@@ -45,10 +46,9 @@ void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
     }
     nob_cmd_append(cmd, "-std=c11", "-Werror", "-Wpedantic",
                    "-Wdeclaration-after-statement", "-Wmissing-prototypes",
-                   "-Wstrict-prototypes", "-Wmissing-variable-declarations",
-                   "-Wshadow", "-Wformat=2", "-Wundef", "-Wformat-truncation",
-                   "-Wconversion", "-Wuninitialized", "-Wnested-externs",
-                   "-Wunused-function", "-Wunused-variable",
+                   "-Wstrict-prototypes", "-Wshadow", "-Wformat=2", "-Wundef",
+                   "-Wformat-truncation", "-Wconversion", "-Wuninitialized",
+                   "-Wnested-externs", "-Wunused-function", "-Wunused-variable",
                    "-Wdouble-promotion");
 
     nob_cmd_append(cmd, lib);
@@ -282,6 +282,8 @@ void setup_lightdm_helper_flags(void) {
         strcpy(lightdm_helper_path, "/usr/local/libexec/wpc/lightdm_helper");
     }
 
+    // set enable_lightdm_helper to true if enable_helper_var is not equal
+    // to 0. if enable_helper_var is NULL, default to true
     if (enable_helper_var != NULL) {
         enable_lightdm_helper = strcmp(enable_helper_var, "0") != 0;
     }

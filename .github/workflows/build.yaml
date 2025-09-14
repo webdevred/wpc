@@ -37,3 +37,7 @@ jobs:
         run: ./nob
         env:
           WPC_HELPER: 0
+      - name: Build using Clang instead of GCC
+        run: |
+          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
+          ./nob

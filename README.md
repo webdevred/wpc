@@ -1,5 +1,8 @@
 # WPC - Desktop and lock screen wallpaper setter
 
+[![Formatting](https://github.com/webdevred/wpc/actions/workflows/formatting.yaml/badge.svg?event=push)](https://github.com/webdevred/wpc/actions/workflows/formatting.yaml)
+[![Building](https://github.com/webdevred/wpc/actions/workflows/build.yaml/badge.svg?event=push)](https://github.com/webdevred/wpc/actions/workflows/build.yaml)
+
 ## Introduction
 
 WPC (wallpaper changer) is a program that allows the user to set wallpapers for both the desktop and lock screen. It is a simple and easy-to-use application that lets you personalize your computer and make it more visually appealing.

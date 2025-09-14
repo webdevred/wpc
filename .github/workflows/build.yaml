@@ -20,7 +20,7 @@ jobs:
           ' README.md > apt-deps.txt
           cat apt-deps.txt
       - name: Cache apt packages
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/apt-cache
           key: ${{ runner.os }}-apt-${{ hashFiles('apt-deps.txt') }}

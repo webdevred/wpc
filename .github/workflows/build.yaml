@@ -12,24 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Find dependency list
-        run: |
-          awk '
-          /Requirements:/ { in_section=1; next }
-          in_section && /^- / { print substr($0, 3); last_dep=NR }
-          NR > last_dep && in_section { exit }
-          ' README.md > apt-deps.txt
-          cat apt-deps.txt
+        run: awk -f ./.github/scripts/extract_dependencies.awk README.md | tee apt-deps.txt
       - name: Cache apt packages
         uses: actions/cache@v4
         with:
           path: ~/apt-cache
           key: ${{ runner.os }}-apt-${{ hashFiles('apt-deps.txt') }}
       - name: Install dependencies with cache
-        run: |
-          mkdir -p $HOME/apt-cache
-          sudo apt-get -o Dir::Cache::Archives="$HOME/apt-cache" update
-          sudo apt-get -o Dir::Cache::Archives="$HOME/apt-cache" install -y clang $(cat apt-deps.txt)
-          sudo rm -rf $HOME/apt-cache/partial $HOME/apt-cache/lock
+        run: bash ./.github/scripts/fetch_dependencies.sh
       - run: clang nob.c -o nob
       - name: Build with default configuration
         run: ./nob
@@ -38,6 +28,6 @@ jobs:
         env:
           WPC_HELPER: 0
       - name: Build using Clang instead of GCC
-        run: |
+        run: |-
           sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
           ./nob

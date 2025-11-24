@@ -10,7 +10,7 @@ jobs:
   check-formatting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - run: clang-format -n -Werror src/*.c
       - run: clang-format -n -Werror include/**/*.h
       - run: clang-format -n -Werror nob.c

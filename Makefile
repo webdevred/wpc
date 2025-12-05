@@ -7,22 +7,22 @@ WPC_IMAGEMAGICK_7 ?= 1
 WPC_INSTALL_DIR := /usr/local/bin
 WPC_HELPER_INSTALL_DIR := /usr/local/libexec/wpc
 WPC_HELPER_PATH := $(WPC_HELPER_INSTALL_DIR)/lightdm_helper
-COMMON_CFLAGS := -std=c11
-                 -Werror \
-                 -Wpedantic \
-                 -Wdeclaration-after-statement \
-                 -Wmissing-prototypes \
-                 -Wstrict-prototypes \
-                 -Wshadow \
-                 -Wformat=2 \
-                 -Wundef \
-                 -Wformat-truncation \
-                 -Wconversion \
-                 -Wuninitialized \
-                 -Wnested-externs \
-                 -Wunused-function \
-                 -Wunused-variable \
-                 -Wdouble-promotion
+COMMON_CFLAGS := -std=c11 \
+		-Werror \
+		-Wpedantic \
+		-Wdeclaration-after-statement \
+		-Wmissing-prototypes \
+		-Wstrict-prototypes \
+		-Wshadow \
+		-Wformat=2 \
+		-Wundef \
+		-Wformat-truncation \
+		-Wconversion \
+		-Wuninitialized \
+		-Wnested-externs \
+		-Wunused-function \
+		-Wunused-variable \
+		-Wdouble-promotion \
 	         $(shell pkg-config --cflags glib-2.0)
 COMMON_LDFLAGS := $(shell pkg-config --libs libcjson glib-2.0)
 

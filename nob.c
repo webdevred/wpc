@@ -67,6 +67,10 @@ void build_object(Nob_Cmd *cmd, LibFlagsDa *main_flags,
 char *run_cmd_and_get_output(Nob_Cmd *cmd, char *tmp_filename) {
     char template[] = "/tmp/tmpdir.wpc-nob-XXXXXX";
     char *dir_name = mkdtemp(template);
+    if (dir_name == NULL) {
+        nob_log(NOB_ERROR, "mkdtemp failed: %s", strerror(errno));
+        return NULL;
+    }
     char *file_path = nob_temp_sprintf("%s/%s.txt", dir_name, tmp_filename);
     Nob_String_Builder builder = {0};
 
@@ -75,7 +79,11 @@ char *run_cmd_and_get_output(Nob_Cmd *cmd, char *tmp_filename) {
     nob_read_entire_file(file_path, &builder);
     if (builder.count == 0 || builder.items == NULL) {
         nob_da_free(builder);
+        unlink(file_path);
+        rmdir(dir_name);
+        return NULL;
     }
+    nob_da_append(&builder, '\0');
     char *output = strdup(builder.items);
     unlink(file_path);
     rmdir(dir_name);
@@ -100,16 +108,15 @@ LibFlagsDa list_lib_flags(Nob_Cmd *cmd, char *lib_names[], bool cflags) {
     }
 
     char *buffer = run_cmd_and_get_output(cmd, name);
-
+    if (buffer == NULL) {
+        exit(1);
+    }
     LibFlagsDa lib_places = {0};
-    char *lib = strtok(buffer, " ");
-    nob_da_append(&lib_places, strdup(lib));
-    while ((lib = strtok(NULL, " ")) != NULL) {
-        if (isspace(lib[0])) {
-            continue;
-        }
+    const char *delims = " \t\r\n";
+    char *lib = strtok(buffer, delims);
+    while (lib != NULL) {
         nob_da_append(&lib_places, strdup(lib));
-        lib += strlen(lib) + 1;
+        lib = strtok(NULL, delims);
     }
     free(name);
     free(buffer);
@@ -255,6 +262,10 @@ void should_use_imagemagick7(Nob_Cmd *cmd) {
     nob_cmd_append(cmd, "pkg-config", "--modversion", "MagickWand");
 
     char *buffer = run_cmd_and_get_output(cmd, "imagemagick");
+    if (buffer == NULL) {
+        nob_log(NOB_ERROR, "Could not read pkg-config --modversion output.");
+        exit(1);
+    }
 
     if (strncmp(buffer, "7.", 2) == 0) {
         use_imagemagick7 = true;
@@ -280,9 +291,11 @@ void setup_lightdm_helper_flags(void) {
     char *helper_path_var = getenv("WPC_HELPER_PATH");
 
     if (helper_path_var != NULL) {
-        strcpy(lightdm_helper_path, helper_path_var);
+        snprintf(lightdm_helper_path, sizeof(lightdm_helper_path), "%s",
+                 helper_path_var);
     } else {
-        strcpy(lightdm_helper_path, "/usr/local/libexec/wpc/lightdm_helper");
+        snprintf(lightdm_helper_path, sizeof(lightdm_helper_path), "%s",
+                 "/usr/local/libexec/wpc/lightdm_helper");
     }
 
     // set enable_lightdm_helper to true if enable_helper_var is not equal

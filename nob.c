@@ -73,6 +73,9 @@ char *run_cmd_and_get_output(Nob_Cmd *cmd, char *tmp_filename) {
     nob_cmd_run(cmd, .stdout_path = file_path);
 
     nob_read_entire_file(file_path, &builder);
+    if (builder.count == 0 || builder.items == NULL) {
+        nob_da_free(builder);
+    }
     char *output = strdup(builder.items);
     unlink(file_path);
     rmdir(dir_name);

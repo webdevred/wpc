@@ -68,8 +68,10 @@ extern void free_wallpapers(WallpaperArray *arr) {
 }
 
 extern WallpaperQueue *new_wallpaper_queue(gchar *source_directory) {
+    WallpaperQueue *queue;
     WallpaperArray *wallpapers = list_wallpapers(source_directory);
-    WallpaperQueue *queue = malloc(sizeof(WallpaperQueue));
+    if (! wallpapers) return NULL;
+    queue = malloc(sizeof(WallpaperQueue));
     queue->wallpapers = wallpapers;
     queue->current_wallpaper = 0;
     return queue;

@@ -187,8 +187,7 @@ static void show_images_src_dir(GtkApplication *app) {
             const int thumb_max_w = 400, thumb_max_h = 320;
 
             pixbuf = gdk_pixbuf_new_from_file_at_scale(
-                wallpapers[i].path, thumb_max_w, thumb_max_h, TRUE,
-                &thumb_err);
+                wallpapers[i].path, thumb_max_w, thumb_max_h, TRUE, &thumb_err);
             if (pixbuf) {
                 GdkTexture *texture;
                 GBytes *bytes;
@@ -198,9 +197,8 @@ static void show_images_src_dir(GtkApplication *app) {
                 width = gdk_pixbuf_get_width(pixbuf);
                 height = gdk_pixbuf_get_height(pixbuf);
                 rowstride = gdk_pixbuf_get_rowstride(pixbuf);
-                format = gdk_pixbuf_get_has_alpha(pixbuf)
-                            ? GDK_MEMORY_R8G8B8A8
-                            : GDK_MEMORY_R8G8B8;
+                format = gdk_pixbuf_get_has_alpha(pixbuf) ? GDK_MEMORY_R8G8B8A8
+                                                          : GDK_MEMORY_R8G8B8;
 
                 bytes = g_bytes_new_with_free_func(
                     gdk_pixbuf_get_pixels(pixbuf),
@@ -215,8 +213,8 @@ static void show_images_src_dir(GtkApplication *app) {
                 g_object_unref(pixbuf);
             } else {
                 g_warning("Failed to load thumbnail for %s: %s",
-                         wallpapers[i].path,
-                         thumb_err ? thumb_err->message : "unknown error");
+                          wallpapers[i].path,
+                          thumb_err ? thumb_err->message : "unknown error");
                 g_clear_error(&thumb_err);
                 image = gtk_picture_new_for_filename(wallpapers[i].path);
             }

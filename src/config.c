@@ -368,11 +368,9 @@ extern void dump_config(Config *config) {
     cJSON *settings_json, *monitors_with_backgrounds_json;
     gchar *filename;
     FILE *file;
-    char *string;
+    char *string = NULL;
     BgMode bg_mode;
     gushort number_of_monitors;
-    string = malloc(sizeof(char) * 3);
-    string = "{}";
     filename = get_config_file();
     create_parent_dirs(filename, 0770);
     file = fopen(filename, "w");
@@ -434,11 +432,13 @@ extern void dump_config(Config *config) {
     string = cJSON_Print(settings_json);
     if (string == NULL) {
         fprintf(stderr, "Failed to print monitor.\n");
+    } else {
+        fwrite(string, sizeof(char), strlen(string), file);
+        fflush(file);
+        free(string);
     }
-    fwrite(string, sizeof(char), strlen(string), file);
-    fflush(file);
 end:
     cJSON_Delete(settings_json);
+    free(filename);
     fclose(file);
-    free(string);
 }

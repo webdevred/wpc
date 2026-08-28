@@ -6,6 +6,7 @@ BEGIN_IGNORE_WARNINGS
 #include <gtk/gtk.h>
 END_IGNORE_WARNINGS
 
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,8 +22,7 @@ END_IGNORE_WARNINGS
 #endif
 
 static const gchar css[] = ".wallpapers_flowbox picture { "
-                           "min-width: 30em; min-height: "
-                           "25em; margin: 0.1em; }";
+                           "margin: 0.1em; }";
 
 typedef enum { DM_BACKGROUND = 0, WM_BACKGROUND } AppTab;
 
@@ -181,7 +181,45 @@ static void show_images_src_dir(GtkApplication *app) {
         gtk_flow_box_set_sort_func(GTK_FLOW_BOX(flowbox), NULL, NULL, NULL);
         for (i = 0; i < wp_arr_wrapper->amount_used; i++) {
             GtkWidget *flow_child = gtk_flow_box_child_new();
-            GtkWidget *image = gtk_picture_new_for_filename(wallpapers[i].path);
+            GtkWidget *image;
+            GdkPixbuf *pixbuf;
+            GError *thumb_err = NULL;
+            const int thumb_max_w = 400, thumb_max_h = 320;
+
+            pixbuf = gdk_pixbuf_new_from_file_at_scale(
+                wallpapers[i].path, thumb_max_w, thumb_max_h, TRUE,
+                &thumb_err);
+            if (pixbuf) {
+                GdkTexture *texture;
+                GBytes *bytes;
+                int width, height, rowstride;
+                GdkMemoryFormat format;
+
+                width = gdk_pixbuf_get_width(pixbuf);
+                height = gdk_pixbuf_get_height(pixbuf);
+                rowstride = gdk_pixbuf_get_rowstride(pixbuf);
+                format = gdk_pixbuf_get_has_alpha(pixbuf)
+                            ? GDK_MEMORY_R8G8B8A8
+                            : GDK_MEMORY_R8G8B8;
+
+                bytes = g_bytes_new_with_free_func(
+                    gdk_pixbuf_get_pixels(pixbuf),
+                    gdk_pixbuf_get_byte_length(pixbuf),
+                    (GDestroyNotify)g_object_unref, g_object_ref(pixbuf));
+
+                texture = gdk_memory_texture_new(width, height, format, bytes,
+                                                 (gsize)rowstride);
+                image = gtk_picture_new_for_paintable(GDK_PAINTABLE(texture));
+                g_object_unref(texture);
+                g_bytes_unref(bytes);
+                g_object_unref(pixbuf);
+            } else {
+                g_warning("Failed to load thumbnail for %s: %s",
+                         wallpapers[i].path,
+                         thumb_err ? thumb_err->message : "unknown error");
+                g_clear_error(&thumb_err);
+                image = gtk_picture_new_for_filename(wallpapers[i].path);
+            }
             gtk_flow_box_child_set_child(GTK_FLOW_BOX_CHILD(flow_child), image);
             gtk_flow_box_append(GTK_FLOW_BOX(flowbox), flow_child);
             gtk_widget_set_visible(image, TRUE);
@@ -318,7 +356,6 @@ static void show_images(GtkButton *button, GtkApplication *app) {
 
     gtk_widget_add_css_class(GTK_WIDGET(flowbox), "wallpapers_flowbox");
     gtk_widget_set_vexpand(GTK_WIDGET(flowbox), TRUE);
-    gtk_widget_set_hexpand(GTK_WIDGET(flowbox), TRUE);
     g_object_set_data(G_OBJECT(app), "flowbox", flowbox);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scrolled_window),
                                   flowbox);

@@ -25,13 +25,17 @@
 
 #define MAX_LINE_LENGTH 1024
 
+#define EXIT_BAD_PAYLOAD 2
+#define EXIT_IO_ERROR 3
+
 static int lightdm_parse_config(char ***config_ptr, gulong *lines_ptr) {
     char **temp, **config;
     guint lines;
     char line[MAX_LINE_LENGTH];
     FILE *file = fopen(CONFIG_FILE, "r");
     if (file == NULL) {
-        perror("Error opening configuration file");
+        fprintf(stderr, "Error opening configuration file: %s\n",
+                strerror(errno));
         return -1;
     }
 
@@ -51,7 +55,7 @@ static int lightdm_parse_config(char ***config_ptr, gulong *lines_ptr) {
 
         temp = realloc(config, (lines + 1) * sizeof(char *));
         if (temp == NULL) {
-            perror("Error reallocating memory");
+            fprintf(stderr, "Error reallocating memory: %s\n", strerror(errno));
             fclose(file);
             for (guint i = 0; i < lines; i++) {
                 free(config[i]);
@@ -63,7 +67,8 @@ static int lightdm_parse_config(char ***config_ptr, gulong *lines_ptr) {
 
         config[lines] = strdup(line);
         if (config[lines] == NULL) {
-            perror("Error allocating memory for line");
+            fprintf(stderr, "Error allocating memory for line: %s\n",
+                    strerror(errno));
             fclose(file);
             for (guint i = 0; i < lines; i++) {
                 free(config[i]);
@@ -79,12 +84,14 @@ static int lightdm_parse_config(char ***config_ptr, gulong *lines_ptr) {
     if (lines == 0) {
         config = malloc(sizeof(char *));
         if (config == NULL) {
-            perror("Error allocating memory for empty config");
+            fprintf(stderr, "Error allocating memory for empty config: %s\n",
+                    strerror(errno));
             return -1;
         }
         config[0] = strdup("");
         if (config[0] == NULL) {
-            perror("Error allocating memory for empty line");
+            fprintf(stderr, "Error allocating memory for empty line: %s\n",
+                    strerror(errno));
             free(config);
             return -1;
         }
@@ -96,32 +103,39 @@ static int lightdm_parse_config(char ***config_ptr, gulong *lines_ptr) {
     return 0;
 }
 
-static void copy_file(const char *src, const char *dst) {
+static int copy_file(const char *src, const char *dst) {
     int fd_in, fd_out;
     off_t len, ret;
     struct stat stat;
     fd_in = open(src, O_RDONLY);
     if (fd_in == -1) {
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error opening source file: %s\n", strerror(errno));
+        return -1;
     }
 
     if (fstat(fd_in, &stat) == -1) {
-        perror("fstat");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "fstat: %s\n", strerror(errno));
+        close(fd_in);
+        return -1;
     }
 
     len = stat.st_size;
 
     fd_out = open(dst, O_CREAT | O_WRONLY | O_TRUNC, 0644);
     if (fd_out == -1) {
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error opening destination file: %s\n",
+                strerror(errno));
+        close(fd_in);
+        return -1;
     }
 
     do {
         ret = copy_file_range(fd_in, NULL, fd_out, NULL, (size_t)len, 0);
         if (ret == -1) {
-            perror("copy_file_range");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "copy_file_range: %s\n", strerror(errno));
+            close(fd_in);
+            close(fd_out);
+            return -1;
         }
 
         len -= ret;
@@ -129,6 +143,7 @@ static void copy_file(const char *src, const char *dst) {
 
     close(fd_in);
     close(fd_out);
+    return 0;
 }
 
 static gboolean is_this_line_monitor(char *line, const char *monitor_name) {
@@ -176,12 +191,20 @@ static int set_background(const char *scaled_wallpaper_path,
         closedir(dir);
     } else if (errno == ENOENT) {
         if (create_parent_dirs(dst_wallpaper_path, 0775) != 0) {
-            fprintf(stderr, "Failed to create storage directory");
+            fprintf(stderr, "Failed to create storage directory\n");
+            free(storage_directory);
             return 1;
         }
+    } else {
+        fprintf(stderr, "opendir failed: %s\n", strerror(errno));
+        free(storage_directory);
+        return 1;
     }
+    free(storage_directory);
 
-    copy_file(scaled_wallpaper_path, dst_wallpaper_path);
+    if (copy_file(scaled_wallpaper_path, dst_wallpaper_path) != 0) {
+        return 1;
+    }
 
     config = NULL;
     lines = 0;
@@ -192,8 +215,7 @@ static int set_background(const char *scaled_wallpaper_path,
     if (lightdm_parse_config(&config, &lines) == 0) {
         FILE *file = fopen(CONFIG_FILE, "w");
         if (file == NULL) {
-            fprintf(stderr, "Error opening configuration file for writing");
-            free(storage_directory);
+            fprintf(stderr, "Error opening configuration file for writing\n");
             for (guint i = 0; i < lines; i++) {
                 free(config[i]);
             }
@@ -232,9 +254,10 @@ static int set_background(const char *scaled_wallpaper_path,
 
         fclose(file);
 
-        printf("successfully edited background for LightDM");
+        fprintf(stderr, "successfully edited background for LightDM\n");
+    } else {
+        return 1;
     }
-    fflush(stdout);
     return 0;
 }
 
@@ -244,10 +267,16 @@ static gboolean load_payload(const char *payload, char **config_file_path,
     cJSON *config_file_path_json, *payload_json, *tmp_file_path_json,
         *dst_file_path_json, *monitor_name_json;
     gboolean failed;
+
+    *config_file_path = NULL;
+    *tmp_file_path = NULL;
+    *dst_file_path = NULL;
+    *monitor_name = NULL;
+
     payload_json = cJSON_Parse(payload);
 
     if (!payload_json) {
-        fprintf(stderr, "JSON parsing error\n");
+        fprintf(stderr, "JSON parsing error, payload was: %s\n", payload);
         return TRUE;
     }
 
@@ -259,7 +288,8 @@ static gboolean load_payload(const char *payload, char **config_file_path,
         config_file_path_json->valuestring) {
         *config_file_path = strdup(config_file_path_json->valuestring);
     } else {
-        fprintf(stderr, "Failed to parse configFilePath\n");
+        fprintf(stderr, "Failed to parse configFilePath, payload was: %s\n",
+                payload);
         failed = TRUE;
     }
 
@@ -268,7 +298,8 @@ static gboolean load_payload(const char *payload, char **config_file_path,
     if (cJSON_IsString(tmp_file_path_json) && tmp_file_path_json->valuestring) {
         *tmp_file_path = strdup(tmp_file_path_json->valuestring);
     } else {
-        fprintf(stderr, "Failed to parse tmpFilePath\n");
+        fprintf(stderr, "Failed to parse tmpFilePath, payload was: %s\n",
+                payload);
         failed = TRUE;
     }
 
@@ -277,7 +308,8 @@ static gboolean load_payload(const char *payload, char **config_file_path,
     if (cJSON_IsString(dst_file_path_json) && dst_file_path_json->valuestring) {
         *dst_file_path = strdup(dst_file_path_json->valuestring);
     } else {
-        fprintf(stderr, "Failed to parse dstFilePath\n");
+        fprintf(stderr, "Failed to parse dstFilePath, payload was: %s\n",
+                payload);
         failed = TRUE;
     }
 
@@ -286,7 +318,8 @@ static gboolean load_payload(const char *payload, char **config_file_path,
     if (cJSON_IsString(monitor_name_json) && monitor_name_json->valuestring) {
         *monitor_name = strdup(monitor_name_json->valuestring);
     } else {
-        fprintf(stderr, "Failed to parse monitorName\n");
+        fprintf(stderr, "Failed to parse monitorName, payload was: %s\n",
+                payload);
         failed = TRUE;
     }
 
@@ -311,21 +344,30 @@ extern int main(int argc, char **argv) {
     char buffer[BUFFER_SIZE];
     ssize_t count;
 
-    char *config_file_path;
-    char *tmp_wallpaper_path;
-    char *dst_wallpaper_path;
-    char *monitor_name;
+    char *config_file_path = NULL;
+    char *tmp_wallpaper_path = NULL;
+    char *dst_wallpaper_path = NULL;
+    char *monitor_name = NULL;
 
     int status;
     (void)argc, (void)argv;
     status = 1;
 
     count = read(STDIN_FILENO, buffer, sizeof(buffer) - 1);
+    if (count < 0) {
+        fprintf(stderr, "read from stdin failed: %s\n", strerror(errno));
+        status = EXIT_IO_ERROR;
+        goto end;
+    }
 
     buffer[count] = '\0';
 
-    load_payload(buffer, &config_file_path, &tmp_wallpaper_path,
-                 &dst_wallpaper_path, &monitor_name);
+    if (load_payload(buffer, &config_file_path, &tmp_wallpaper_path,
+                     &dst_wallpaper_path, &monitor_name)) {
+        fprintf(stderr, "invalid payload, aborting\n");
+        status = EXIT_BAD_PAYLOAD;
+        goto end;
+    }
 
     status =
         set_background(tmp_wallpaper_path, dst_wallpaper_path, monitor_name);
@@ -338,5 +380,6 @@ end:
     free(config_file_path);
     free(tmp_wallpaper_path);
     free(dst_wallpaper_path);
+    free(monitor_name);
     return status;
 }

@@ -21,9 +21,9 @@ static int set_backgrounds_and_exit(void) {
     WallpaperQueue *queue;
     monitor_array = list_monitors(TRUE);
     queue = new_wallpaper_queue(config->source_directory);
-    if(queue) {
-      set_wallpapers(config, queue, monitor_array);
-      free_wallpaper_queue(queue);
+    if (queue) {
+        set_wallpapers(config, queue, monitor_array);
+        free_wallpaper_queue(queue);
     }
     free_config(config);
     free_monitors(monitor_array);
